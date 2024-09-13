@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     DATA_FOLDER: str
     OUT_FOLDER: str
 
+    BROWN_FILE: str
+
     class Config:
         case_sensitive = True
         env_file_encoding = "utf-8"
