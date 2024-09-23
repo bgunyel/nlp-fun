@@ -4,7 +4,7 @@ import datetime
 
 import torch
 
-from config import settings
+from config import settings, model_settings
 import source.ml.models.bengio2003 as bengio2003
 
 
@@ -18,9 +18,8 @@ def main():
     print(f'Data Folder: {settings.DATA_FOLDER}')
     print(f'Out Folder: {settings.OUT_FOLDER}')
 
-    device = torch.device('cuda')
 
-    bengio2003.train(device=device)
+    bengio2003.train(device=torch.device(model_settings.DEVICE))
 
 
 

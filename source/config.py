@@ -25,7 +25,7 @@ class Constants(BaseSettings):
 
 
 class ModelSettings(BaseSettings):
-    device: str = "cuda"
+    DEVICE: str = "cuda"
 
 
 settings = Settings()
