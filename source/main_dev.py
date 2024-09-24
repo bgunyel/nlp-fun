@@ -1,11 +1,10 @@
-import os
-import time
 import datetime
+import time
 
 import torch
 
 from config import settings, model_settings
-import source.ml.models.bengio2003 as bengio2003
+from source.ml.train import train
 
 
 def main():
@@ -18,16 +17,7 @@ def main():
     print(f'Data Folder: {settings.DATA_FOLDER}')
     print(f'Out Folder: {settings.OUT_FOLDER}')
 
-
-    bengio2003.train(device=torch.device(model_settings.DEVICE))
-
-
-
-
-
-
-
-    dummy = -32
+    train(device=torch.device(model_settings.DEVICE))
 
 
 if __name__ == '__main__':
