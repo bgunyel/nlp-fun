@@ -1,27 +1,23 @@
-from dataclasses import dataclass
-
+import tiktoken
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-import tiktoken
 from tqdm import tqdm
 
+from source.ml.data import CustomDataset
 from source.ml.models import get_model, get_config
-from source.ml.data import TokenDataset
+from source.ml.models.base import TrainConfig
 from source.ml.utils import get_dataset_splits, evaluate
 
 
-@dataclass
-class TrainConfig:
-    dataset_name: str = 'brown'
-    model_name: str = 'bengio2003'
-    n_epochs: int = 1
-    batch_size: int = 32
+def train_from_scratch(device: torch.device):
 
-
-def train(device: torch.device):
-
-    train_config = TrainConfig()
+    train_config = TrainConfig(
+        dataset_names = ['brown'],
+        model_name = 'bengio2003',
+        n_epochs = 1,
+        batch_size = 32
+    )
     model_config = get_config(model_name=train_config.model_name, config_type='model')
     optimizer_config = get_config(model_name=train_config.model_name, config_type='optimizer')
 
@@ -30,9 +26,9 @@ def train(device: torch.device):
     # VOCAB_SIZE = BLANK_TOKEN_ID + 1
     VOCAB_SIZE = tokenizer.n_vocab
 
-    train_words, valid_words, test_words = get_dataset_splits(train_config.dataset_name)
-    train_data = TokenDataset(words=train_words, block_size=model_config.block_size, tokenizer=tokenizer)
-    valid_data = TokenDataset(words=valid_words, block_size=model_config.block_size, tokenizer=tokenizer)
+    train_words, valid_words, test_words = get_dataset_splits(train_config.dataset_names[0])
+    train_data = CustomDataset(words=train_words, block_size=model_config.block_size, tokenizer=tokenizer)
+    valid_data = CustomDataset(words=valid_words, block_size=model_config.block_size, tokenizer=tokenizer)
 
     train_loader = DataLoader(
         dataset=train_data,
@@ -124,4 +120,3 @@ def train(device: torch.device):
             dummy = -32
 
     dummy = -32
-

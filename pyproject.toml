@@ -17,6 +17,8 @@ torchaudio = { url = "https://download.pytorch.org/whl/cu121/torchaudio-2.1.2%2B
 torchvision = { url = "https://download.pytorch.org/whl/cu121/torchvision-0.16.2%2Bcu121-cp311-cp311-linux_x86_64.whl"}
 tiktoken = "^0.7.0"
 tqdm = "^4.66.5"
+datasets = "^3.0.1"
+transformers = "^4.45.1"
 
 
 [build-system]

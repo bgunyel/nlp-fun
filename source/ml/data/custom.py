@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 import tiktoken
 
 
-class TokenDataset(Dataset):
+class CustomDataset(Dataset):
     def __init__(self, words: list, block_size: int, tokenizer: tiktoken.Encoding):
         self.words = words
         self.block_size = block_size

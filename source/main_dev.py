@@ -4,7 +4,8 @@ import time
 import torch
 
 from config import settings, model_settings
-from source.ml.train import train
+from source.ml.train_scratch import train_from_scratch
+from source.ml.train_fine_tune import train_fine_tune
 
 
 def main():
@@ -17,7 +18,8 @@ def main():
     print(f'Data Folder: {settings.DATA_FOLDER}')
     print(f'Out Folder: {settings.OUT_FOLDER}')
 
-    train(device=torch.device(model_settings.DEVICE))
+    # train_from_scratch(device=torch.device(model_settings.DEVICE))
+    train_fine_tune(device=torch.device(model_settings.DEVICE))
 
 
 if __name__ == '__main__':
