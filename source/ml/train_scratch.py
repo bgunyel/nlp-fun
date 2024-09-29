@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from source.ml.data import CustomDataset
+from source.ml.datasets import CustomDataset
 from source.ml.models import get_model, get_config
 from source.ml.models.base import TrainConfig
 from source.ml.utils import get_dataset_splits, evaluate

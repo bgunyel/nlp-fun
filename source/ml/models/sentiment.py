@@ -5,7 +5,7 @@ import torch.nn as nn
 from transformers import AutoTokenizer
 
 from source.ml.models.base import TrainerBase, TrainConfig
-from source.ml.data import *
+from source.ml.datasets import *
 
 
 @dataclass
