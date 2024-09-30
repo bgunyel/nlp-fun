@@ -19,7 +19,7 @@ def main():
     print(f'Out Folder: {settings.OUT_FOLDER}')
 
     # train_from_scratch(device=torch.device(model_settings.DEVICE))
-    train_fine_tune(device=torch.device(model_settings.DEVICE))
+    train_fine_tune()
 
 
 if __name__ == '__main__':

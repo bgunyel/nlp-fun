@@ -14,12 +14,12 @@ def train_from_scratch(device: torch.device):
 
     train_config = TrainConfig(
         dataset_names = ['brown'],
-        model_name = 'bengio2003',
+        module_name='bengio2003',
         n_epochs = 1,
         batch_size = 32
     )
-    model_config = get_config(model_name=train_config.model_name, config_type='model')
-    optimizer_config = get_config(model_name=train_config.model_name, config_type='optimizer')
+    model_config = get_config(model_name=train_config.module_name, config_type='model')
+    optimizer_config = get_config(model_name=train_config.module_name, config_type='optimizer')
 
     tokenizer = tiktoken.get_encoding('cl100k_base')
     # BLANK_TOKEN_ID = tokenizer.n_vocab
@@ -40,7 +40,7 @@ def train_from_scratch(device: torch.device):
     )
 
     model = get_model(
-        model_name=train_config.model_name,
+        model_name=train_config.module_name,
         config=model_config,
         vocabulary_size=VOCAB_SIZE,
         num_classes=VOCAB_SIZE).to(device)

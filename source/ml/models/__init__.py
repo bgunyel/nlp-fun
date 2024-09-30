@@ -2,7 +2,7 @@ import importlib
 from dataclasses import dataclass
 import torch.nn as nn
 
-from source.ml.models.base import TrainerBase, TrainConfig
+from source.ml.models.base import TrainerBase, TrainConfig, OptimizerConfig
 
 # from source.ml.models import bengio2003
 
@@ -28,8 +28,8 @@ def get_config(model_name: str, config_type: str):
     instance = class_()
     return instance
 
-def get_trainer(train_config: TrainConfig) -> TrainerBase:
-    module = importlib.import_module(name=f'{MODULE_PREFIX}.{train_config.model_name}')
+def get_trainer(train_config: TrainConfig, optimizer_config: OptimizerConfig) -> TrainerBase:
+    module = importlib.import_module(name=f'{MODULE_PREFIX}.{train_config.module_name}')
     class_ = getattr(module, 'TheTrainer')
-    instance = class_(train_config)
+    instance = class_(train_config, optimizer_config)
     return instance
