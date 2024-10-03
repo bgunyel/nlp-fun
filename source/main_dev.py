@@ -1,3 +1,4 @@
+import os
 import datetime
 import time
 
@@ -17,6 +18,9 @@ def main():
 
     print(f'Data Folder: {settings.DATA_FOLDER}')
     print(f'Out Folder: {settings.OUT_FOLDER}')
+
+    os.environ['TOKENIZERS_PARALLELISM'] = "true"
+    torch.manual_seed(seed=1881)
 
     # train_from_scratch(device=torch.device(model_settings.DEVICE))
     train_fine_tune()

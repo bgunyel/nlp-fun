@@ -6,7 +6,7 @@ from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 
 class DynaSent(Dataset):
-    def __init__(self, data_round: int, data_split: str, tokenizer: [PreTrainedTokenizer, PreTrainedTokenizerFast], max_length: int):
+    def __init__(self, data_round: int, data_split: str, tokenizer: [PreTrainedTokenizer, PreTrainedTokenizerFast]):
         super().__init__()
         self.name = f'dynabench.dynasent.r{data_round}.all'
         self.tokenizer = tokenizer
@@ -16,7 +16,7 @@ class DynaSent(Dataset):
         data = data_dict[data_split]
         encodings = self.tokenizer.batch_encode_plus(
             data['sentence'],
-            max_length=max_length,
+            max_length=tokenizer.model_max_length,
             add_special_tokens=True,
             padding='max_length',
             return_attention_mask=True
