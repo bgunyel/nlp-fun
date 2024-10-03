@@ -75,7 +75,7 @@ class TheTrainer(TrainerBase):
             dataset=self.train_data,
             batch_size=self.mini_batch_size,
             shuffle=True,
-            num_workers=4,
+            num_workers=1,   # TODO: 4
             pin_memory=True,
             drop_last=True
         )
@@ -89,17 +89,19 @@ class TheTrainer(TrainerBase):
         epoch_iters = len(train_loader)
         eval_iters = int(epoch_iters * 0.1)
 
-        step = 0 # Keeps track of batches (not mini-batches)
+        iteration = 0 # Keeps track of mini-batches
+        step = 0 # Keeps track of batches
 
         for epoch in range(self.n_epochs):
-            tqdm_train_loader = tqdm(train_loader, unit="batch", desc=f'Epoch: {epoch}')
+            # tqdm_train_loader = tqdm(train_loader, unit="batch", desc=f'Epoch: {epoch}')
             optimizer.zero_grad()
             loss_accumulated = 0
 
-            for iteration, data_dict in enumerate(tqdm_train_loader):
+            for data_dict in train_loader:
                 input_ids = data_dict['input_ids'].to(self.device)
                 attention_mask = data_dict['attention_mask'].to(self.device)
                 label = data_dict['label'].to(self.device)
+                idx = data_dict['idx']
 
                 with torch.autocast(device_type=self.device.type):
                     logits = self.model(input_ids=input_ids, attention_mask=attention_mask)
@@ -114,4 +116,7 @@ class TheTrainer(TrainerBase):
                     print(f'\t\tStep: {step} | Loss: {loss_accumulated.item()}')
                     loss_accumulated = 0
                     step += 1
+
+                iteration += 1
+
 

@@ -19,6 +19,7 @@ class DynaSent(Dataset):
             max_length=tokenizer.model_max_length,
             add_special_tokens=True,
             padding='max_length',
+            truncation=True,
             return_attention_mask=True
         )
 
@@ -30,7 +31,8 @@ class DynaSent(Dataset):
         return len(self.labels)
 
     def __getitem__(self, idx):
+        # print(f'idx: {idx}')
         input_ids = torch.tensor(self.input_ids[idx], dtype=torch.long)
         attention_mask = torch.tensor(self.attention_mask[idx], dtype=torch.long)
         label = self.stoi[self.labels[idx]]
-        return {'input_ids': input_ids, 'attention_mask': attention_mask, 'label': label}
+        return {'input_ids': input_ids, 'attention_mask': attention_mask, 'label': label, 'idx': idx}
