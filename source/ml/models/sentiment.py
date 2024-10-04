@@ -64,6 +64,7 @@ class TheTrainer(TrainerBase):
     def prepare_model(self) -> tuple[nn.Module, nn.Module]:
         model = TheModel(config=ModelConfig(backbone=self.backbone), num_classes=self.n_classes).to(self.device)
         tokenizer = AutoTokenizer.from_pretrained(self.backbone)
+        tokenizer.model_max_length = model.backbone.embeddings.position_embeddings.num_embeddings  # to be on the safe side
         self.is_model_ready = True
         return model, tokenizer
 
@@ -75,7 +76,7 @@ class TheTrainer(TrainerBase):
             dataset=self.train_data,
             batch_size=self.mini_batch_size,
             shuffle=True,
-            num_workers=1,   # TODO: 4
+            num_workers=4,
             pin_memory=True,
             drop_last=True
         )

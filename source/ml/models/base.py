@@ -5,8 +5,12 @@ import torch
 
 
 class PreTrainedModelPath(Enum):
-    bert_base_cased = 'google-bert/bert-base-cased'
-    bert_large_cased = 'google-bert/bert-large-cased'
+    bert_tiny = 'prajjwal1/bert-tiny'  # L:2, H:128
+    bert_mini = 'prajjwal1/bert-mini'  # L:4, H:256
+    bert_small = 'prajjwal1/bert-small'  # L:4, H:512
+    bert_medium = 'prajjwal1/bert-medium'  # L:8, H: 512
+    bert_base_cased = 'google-bert/bert-base-cased'  # L: 12, H:768
+    bert_large_cased = 'google-bert/bert-large-cased'  # L: 24, H: 1024
     electra_small_discriminator = 'google/electra-small-discriminator'
     electra_base_discriminator = 'google/electra-base-discriminator'
 

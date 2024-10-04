@@ -8,7 +8,7 @@ def train_fine_tune():
 
     train_config = TrainConfig(
         module_name='sentiment',
-        backbone = PreTrainedModelPath.bert_base_cased.value,
+        backbone = PreTrainedModelPath.bert_tiny.value,
         dataset_names = ['SetFit/sst5', 'dynabench/dynasent'],
         n_classes = 3,
         n_epochs = 2,
