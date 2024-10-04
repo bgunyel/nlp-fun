@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from math import floor
 
 import torch
 import torch.nn as nn
@@ -9,6 +10,7 @@ from tqdm import tqdm
 
 from source.ml.models.base import TrainerBase, TrainConfig, OptimizerConfig
 from source.ml.datasets import *
+from source.ml.utils import evaluate, get_lr
 
 
 @dataclass
@@ -87,14 +89,22 @@ class TheTrainer(TrainerBase):
                                       betas=self.optimizer_config.betas,
                                       eps=self.optimizer_config.eps)
         self.model.train()
-        epoch_iters = len(train_loader)
-        eval_iters = int(epoch_iters * 0.1)
+        epoch_steps = int(floor(len(train_loader) / self.grad_accumulation_steps))
+        total_steps = epoch_steps * self.n_epochs
+        eval_steps = int(epoch_steps * 0.1)
+        warmup_steps = round(2.0 / (1 - self.optimizer_config.betas[1]))  # https://arxiv.org/pdf/1910.04209
 
         iteration = 0 # Keeps track of mini-batches
         step = 0 # Keeps track of batches
 
+        lr = get_lr(step=step, min_lr=6e-5, max_lr=6e-4, warmup_iters=warmup_steps, lr_decay_iters=total_steps)
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
+
         for epoch in range(self.n_epochs):
-            # tqdm_train_loader = tqdm(train_loader, unit="batch", desc=f'Epoch: {epoch}')
+            print(f'Epoch: {epoch+1} / {self.n_epochs}:')
+
+            # because drop_last = True in dataloader
             optimizer.zero_grad()
             loss_accumulated = 0
 
@@ -102,7 +112,6 @@ class TheTrainer(TrainerBase):
                 input_ids = data_dict['input_ids'].to(self.device)
                 attention_mask = data_dict['attention_mask'].to(self.device)
                 label = data_dict['label'].to(self.device)
-                idx = data_dict['idx']
 
                 with torch.autocast(device_type=self.device.type):
                     logits = self.model(input_ids=input_ids, attention_mask=attention_mask)
@@ -114,10 +123,32 @@ class TheTrainer(TrainerBase):
                 if (iteration + 1) % self.grad_accumulation_steps == 0:
                     optimizer.step()
                     optimizer.zero_grad()
-                    print(f'\t\tStep: {step} | Loss: {loss_accumulated.item()}')
                     loss_accumulated = 0
                     step += 1
+                    lr = get_lr(step=step, min_lr=6e-5, max_lr=6e-4, warmup_iters=warmup_steps,
+                                lr_decay_iters=total_steps)
+                    for param_group in optimizer.param_groups:
+                        param_group['lr'] = lr
 
                 iteration += 1
+
+            print(f'Epoch: {epoch+1} finished')
+            train_set_loss = evaluate(model=self.model,
+                                      data_loader=DataLoader(dataset=self.train_data,
+                                                             batch_size=self.mini_batch_size,
+                                                             shuffle=False,
+                                                             num_workers=4,
+                                                             pin_memory=True,
+                                                             drop_last=True))
+            valid_set_loss = evaluate(model=self.model,
+                                      data_loader=DataLoader(dataset=self.valid_data,
+                                                             batch_size=self.mini_batch_size,
+                                                             shuffle=False,
+                                                             num_workers=4,
+                                                             pin_memory=True,
+                                                             drop_last=True))
+            print(f'\t\tTrain Set Loss : {train_set_loss:.4f}')
+            print(f'\t\tValid Set Loss : {valid_set_loss:.4f}')
+
 
 

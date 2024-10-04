@@ -1,4 +1,5 @@
 import importlib
+import math
 
 import torch
 import torch.nn as nn
@@ -17,18 +18,34 @@ def evaluate(model: nn.Module, data_loader: DataLoader):
 
     losses = torch.zeros(len(data_loader))
 
-    for idx, (x, y) in enumerate(data_loader):
-        x = x.to(device)
-        y = y.to(device)
+    for idx, data_dict in enumerate(data_loader):
+        input_ids = data_dict['input_ids'].to(device)
+        attention_mask = data_dict['attention_mask'].to(device)
+        label = data_dict['label'].to(device)
 
         with torch.autocast(device_type=model_settings.DEVICE):
-            logits = model(x)
-            loss = F.cross_entropy(input=logits, target=y)
+            logits = model(input_ids=input_ids, attention_mask=attention_mask)
+            loss = F.cross_entropy(input=logits, target=label, reduction='mean')
 
         losses[idx] = loss.item()
 
     model.train()
     return losses.mean()
+
+
+# learning rate decay scheduler (cosine with warmup) (from Karpathy nanoGPT)
+def get_lr(step: int, min_lr: float, max_lr: float, warmup_iters: int, lr_decay_iters: int) -> float:
+
+    if step < warmup_iters:
+        return max_lr * (step+1) / warmup_iters
+
+    if step > lr_decay_iters:
+        return min_lr
+    # 3) in between, use cosine decay down to min learning rate
+    decay_ratio = (step - warmup_iters) / (lr_decay_iters - warmup_iters)
+    assert 0 <= decay_ratio <= 1
+    coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
+    return min_lr + coeff * (max_lr - min_lr)
 
 
 def get_dataset_splits(dataset_name: str) -> tuple[list, list, list]:
