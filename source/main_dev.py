@@ -27,9 +27,9 @@ def main():
 
 
 if __name__ == '__main__':
-    print(f'{settings.APPLICATION_NAME} started at {datetime.datetime.now()}')
+    print(f'{settings.APPLICATION_NAME} started at {datetime.datetime.now().replace(microsecond=0)}')
     time1 = time.time()
     main()
     time2 = time.time()
-    print(f'{settings.APPLICATION_NAME} finished at {datetime.datetime.now()}')
+    print(f'{settings.APPLICATION_NAME} finished at {datetime.datetime.now().replace(microsecond=0)}')
     print(f'{settings.APPLICATION_NAME} took {(time2 - time1):.2f} seconds')

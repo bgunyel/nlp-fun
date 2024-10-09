@@ -1,4 +1,3 @@
-import importlib
 import math
 
 import torch
@@ -7,11 +6,10 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from source.config import settings, model_settings
-from source.ml.models import bengio2003
 
 
 @torch.no_grad()
-def evaluate(model: nn.Module, data_loader: DataLoader):
+def evaluate(model: nn.Module, data_loader: DataLoader) -> float:
 
     device = torch.device(model_settings.DEVICE)
     model.eval()
@@ -30,7 +28,7 @@ def evaluate(model: nn.Module, data_loader: DataLoader):
         losses[idx] = loss.item()
 
     model.train()
-    return losses.mean()
+    return losses.mean().item()
 
 
 # learning rate decay scheduler (cosine with warmup) (from Karpathy nanoGPT)

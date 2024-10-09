@@ -1,10 +1,6 @@
 import importlib
-from dataclasses import dataclass
 import torch.nn as nn
-
 from source.ml.models.base import TrainerBase, TrainConfig, OptimizerConfig
-
-# from source.ml.models import bengio2003
 
 MODULE_PREFIX = 'source.ml.models'
 

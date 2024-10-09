@@ -27,7 +27,6 @@ class TrainConfig:
     mini_batch_size: int = None  # for gradient accumulation in (batch_size // mini_batch_size) steps
 
 
-
 @dataclass
 class OptimizerConfig:
     lr: float = None
@@ -64,4 +63,8 @@ class TrainerBase(ABC):
 
     @abstractmethod
     def train(self):
+        pass
+
+    @abstractmethod
+    def evaluate(self):
         pass
