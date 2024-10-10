@@ -52,6 +52,14 @@ class TheTrainer(TrainerBase):
         log_file_path = os.path.join(settings.OUT_FOLDER, f'train_log__{train_start}.parquet')
         config_file_path = os.path.join(settings.OUT_FOLDER, f'config__{train_start}.json')
 
+        expected_pre_training_loss = -log(1.0 / self.n_classes)  # -ln(1/n_classes) for cross entropy loss
+        initial_train_set_loss, initial_valid_set_loss = self.evaluate()
+
+        print(f'Pre-Training Stats:')
+        print(f'\t\tExpected Loss  : {expected_pre_training_loss:.4f}')
+        print(f'\t\tTrain Set Loss : {initial_train_set_loss:.4f}')
+        print(f'\t\tValid Set Loss : {initial_valid_set_loss:.4f}')
+
         train_loader = DataLoader(
             dataset=self.train_data,
             batch_size=self.mini_batch_size,
@@ -236,17 +244,4 @@ class TheTrainer(TrainerBase):
                     optimizer.step()
                     print(f'Iteration: {iteration} Loss: {loss.item()}')
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        print('--- One Batch Fitting Ended ---')

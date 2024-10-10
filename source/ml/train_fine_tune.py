@@ -28,5 +28,5 @@ def train_fine_tune():
         raise ValueError('mini_batch_size must be divisible by batch_size')
 
     trainer = get_trainer(train_config=train_config, optimizer_config=optimizer_config)
-    trainer.fit_to_one_batch()
-    # trainer.train()
+    # trainer.fit_to_one_batch()
+    trainer.train()
