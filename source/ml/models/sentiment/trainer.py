@@ -2,7 +2,8 @@ import datetime
 import json
 import os
 import time
-from math import floor
+from math import floor, log
+from random import randint
 
 import pandas as pd
 import torch
@@ -184,3 +185,68 @@ class TheTrainer(TrainerBase):
 
         with open(config_file_name, 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, ensure_ascii=False, indent=4)
+
+
+    def fit_to_one_batch(self):
+
+        if (not self.is_data_ready) or (not self.is_model_ready):
+            raise RuntimeError('Data and Model must be ready before one batch fitting experiment!')
+
+        expected_pre_training_loss = -log(1.0 / self.n_classes)  # -ln(1/n_classes) for cross entropy loss
+        n_samples = len(self.train_data)
+
+        print('--- One Batch Fitting ---')
+        print(f'Expected Pre-Training Loss: {expected_pre_training_loss:.4f}')
+
+        train_loader = DataLoader(
+            dataset=self.train_data,
+            batch_size=self.mini_batch_size,
+            shuffle=True,
+            num_workers=4,
+            pin_memory=True,
+            drop_last=True
+        )
+
+        optimizer = torch.optim.AdamW(self.model.parameters(),
+                                      lr=self.optimizer_config.lr,
+                                      weight_decay=self.optimizer_config.weight_decay,
+                                      betas=self.optimizer_config.betas,
+                                      eps=self.optimizer_config.eps)
+
+        self.model.train()
+
+        batch_idx = randint(0, len(train_loader) - 1)
+
+        for idx, data_dict in enumerate(train_loader):
+            if idx == batch_idx:
+                print(f'Batch Idx: {idx}')
+
+                for iteration in range(100):
+                    input_ids = data_dict['input_ids'].to(self.device)
+                    attention_mask = data_dict['attention_mask'].to(self.device)
+                    label = data_dict['label'].to(self.device)
+
+                    optimizer.zero_grad()
+
+                    with torch.autocast(device_type=self.device.type):
+                        logits = self.model(input_ids=input_ids, attention_mask=attention_mask)
+                        loss = F.cross_entropy(input=logits, target=label, reduction='mean')
+
+                    loss.backward()
+                    optimizer.step()
+                    print(f'Iteration: {iteration} Loss: {loss.item()}')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

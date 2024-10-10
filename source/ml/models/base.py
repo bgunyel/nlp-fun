@@ -53,6 +53,8 @@ class TrainerBase(ABC):
         self.is_model_ready = False
         self.grad_accumulation_steps = self.batch_size // self.mini_batch_size
 
+        self.model = None
+
     @abstractmethod
     def prepare_data(self):
         pass
@@ -68,3 +70,16 @@ class TrainerBase(ABC):
     @abstractmethod
     def evaluate(self):
         pass
+
+    @abstractmethod
+    def fit_to_one_batch(self):
+        pass
+
+    def get_number_of_model_parameters(self) -> int:
+        if not self.is_model_ready:
+            raise RuntimeError('Model NOT ready!')
+
+        n_params = sum(
+            [p.numel() for p in self.model.parameters(recurse=True)]
+        )
+        return n_params

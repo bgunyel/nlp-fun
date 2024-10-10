@@ -8,8 +8,8 @@ from transformers import AutoModel
 @dataclass
 class ModelConfig:
     backbone: str
-    fc_hidden_size: int = 128  # TODO: Currently not used
-    dropout_prob: float = 0.25 # TODO: Currently not used
+    fc_hidden_size: int = 0  # TODO: Currently not used
+    dropout_prob: float = 0 # TODO: Currently not used
 
 
 class SentimentModel(nn.Module):

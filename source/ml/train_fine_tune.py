@@ -11,8 +11,8 @@ def train_fine_tune():
         backbone = PreTrainedModelPath.bert_tiny.value,
         dataset_names = ['SetFit/sst5', 'dynabench/dynasent'],
         n_classes = 3,
-        n_epochs = 100,
-        batch_size = 32,
+        n_epochs = 25,
+        batch_size = 8,
         mini_batch_size=8,
         device=torch.device(f'cuda:{torch.cuda.current_device()}' if torch.cuda.is_available() else 'cpu'),
     )
@@ -28,4 +28,5 @@ def train_fine_tune():
         raise ValueError('mini_batch_size must be divisible by batch_size')
 
     trainer = get_trainer(train_config=train_config, optimizer_config=optimizer_config)
-    trainer.train()
+    trainer.fit_to_one_batch()
+    # trainer.train()
