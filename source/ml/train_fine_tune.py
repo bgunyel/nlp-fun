@@ -11,8 +11,8 @@ def train_fine_tune():
         backbone = PreTrainedModelPath.bert_tiny.value,
         dataset_names = ['SetFit/sst5', 'dynabench/dynasent'],
         n_classes = 3,
-        n_epochs = 25,
-        batch_size = 8,
+        n_epochs = 10,
+        batch_size = 16,
         mini_batch_size=8,
         device=torch.device(f'cuda:{torch.cuda.current_device()}' if torch.cuda.is_available() else 'cpu'),
     )

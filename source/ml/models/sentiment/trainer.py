@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 import time
-from math import floor, log
+from math import log, ceil
 from random import randint
 
 import pandas as pd
@@ -49,8 +49,6 @@ class TheTrainer(TrainerBase):
             raise RuntimeError('Data and Model must be ready before training!')
 
         train_start = datetime.datetime.now().replace(microsecond=0)
-        log_file_path = os.path.join(settings.OUT_FOLDER, f'train_log__{train_start}.parquet')
-        config_file_path = os.path.join(settings.OUT_FOLDER, f'config__{train_start}.json')
 
         expected_pre_training_loss = -log(1.0 / self.n_classes)  # -ln(1/n_classes) for cross entropy loss
         initial_train_set_loss, initial_valid_set_loss = self.evaluate()
@@ -75,32 +73,38 @@ class TheTrainer(TrainerBase):
                                       betas=self.optimizer_config.betas,
                                       eps=self.optimizer_config.eps)
         self.model.train()
-        epoch_steps = int(floor(len(train_loader) / self.grad_accumulation_steps))
-        total_steps = epoch_steps * self.n_epochs
+        total_steps = int(ceil(self.n_epochs * len(train_loader) / self.grad_accumulation_steps))
         # eval_steps = int(epoch_steps * 0.8)
         # n_eval_steps = int(total_steps / eval_steps) + self.n_epochs
-        warmup_steps = round(2.0 / (1 - self.optimizer_config.betas[1]))  # https://arxiv.org/pdf/1910.04209
+        # warmup_steps = round(2.0 / (1 - self.optimizer_config.betas[1]))  # https://arxiv.org/pdf/1910.04209
+        warmup_steps = round(total_steps * 0.03)
+        max_lr = self.optimizer_config.lr
+        min_lr = max_lr / 10
 
         log_train_loss = [-1.0] * self.n_epochs
         log_valid_loss = [-1.0] * self.n_epochs
         log_epoch_duration = [-1.0] * self.n_epochs
 
+        log_batch_loss = [-1.0] * total_steps
+        log_grad_norm = [-1.0] * total_steps
+        log_lr = [-1.0] * total_steps
+
 
         iteration = 0 # Keeps track of mini-batches
         step = 0 # Keeps track of batches
 
-        lr = get_lr(step=step, min_lr=6e-5, max_lr=6e-4, warmup_iters=warmup_steps, lr_decay_iters=total_steps)
+        lr = get_lr(step=step, min_lr=min_lr, max_lr=max_lr, warmup_iters=warmup_steps, lr_decay_iters=total_steps)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
+        log_lr[step] = lr
+
+        optimizer.zero_grad()
+        loss_accumulated = 0
 
         # START TRAINING LOOP
         for epoch in range(self.n_epochs):
             print(f'Epoch: {epoch+1} / {self.n_epochs}:')
             epoch_start = time.time()
-
-            # because drop_last = True in dataloader
-            optimizer.zero_grad()
-            loss_accumulated = 0
 
             for data_dict in train_loader:
                 input_ids = data_dict['input_ids'].to(self.device)
@@ -115,16 +119,24 @@ class TheTrainer(TrainerBase):
                 loss.backward()
 
                 if (iteration + 1) % self.grad_accumulation_steps == 0:
+                    norm = torch.nn.utils.clip_grad_norm_(parameters=self.model.parameters(), max_norm=1.0, norm_type=2)
+                    log_batch_loss[step] = loss_accumulated.item()
+                    log_grad_norm[step] = norm.item()
                     optimizer.step()
                     optimizer.zero_grad()
                     loss_accumulated = 0
 
                     # Update for the next step
                     step += 1
-                    lr = get_lr(step=step, min_lr=6e-5, max_lr=6e-4, warmup_iters=warmup_steps,
+                    lr = get_lr(step=step, min_lr=min_lr, max_lr=max_lr, warmup_iters=warmup_steps,
                                 lr_decay_iters=total_steps)
                     for param_group in optimizer.param_groups:
                         param_group['lr'] = lr
+                    if step < total_steps:
+                        log_lr[step] = lr
+                    else:
+                        print(f'Step: {step}')
+                        print(f'Total Steps: {total_steps}')
 
                 iteration += 1
 
@@ -141,13 +153,19 @@ class TheTrainer(TrainerBase):
             print(f'\t\tValid Set Loss : {valid_set_loss:.4f}')
             print(f'\t\tEpoch Time     : {epoch_duration:.2f} sec')
 
-        log_df = pd.DataFrame(data={
+        log_epoch_df = pd.DataFrame(data={
             'train_loss': log_train_loss,
             'valid_loss': log_valid_loss,
-            'epoch_duration': log_epoch_duration,
         })
-        log_df.to_parquet(path=log_file_path)
-        self.save_config(config_file_name=config_file_path)
+        log_step_df = pd.DataFrame(data={
+            'batch_loss': log_batch_loss,
+            'grad_norm': log_grad_norm,
+            'learning_rate': log_lr,
+        })
+
+        log_epoch_df.to_parquet(path=os.path.join(settings.OUT_FOLDER, f'train_log__epoch__{train_start}.parquet'))
+        log_step_df.to_parquet(path=os.path.join(settings.OUT_FOLDER, f'train_log__step__{train_start}.parquet'))
+        self.save_config(config_file_name=os.path.join(settings.OUT_FOLDER, f'config__{train_start}.json'))
 
 
     def evaluate(self):
