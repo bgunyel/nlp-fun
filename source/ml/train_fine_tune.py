@@ -18,6 +18,7 @@ def train_fine_tune():
     )
 
     optimizer_config = OptimizerConfig(
+        name='AdamW',
         lr = 3e-4,
         weight_decay = 0.1,
         betas = (0.9, 0.95),

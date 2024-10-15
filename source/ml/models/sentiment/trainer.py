@@ -26,6 +26,7 @@ class TheTrainer(TrainerBase):
         self.name = 'Sentiment Analysis'
         self.model_config=ModelConfig(backbone=self.backbone)
         self.model, self.tokenizer = self.prepare_model()
+        self.optimizer = self.configure_optimizers()
         self.train_data, self.valid_data = self.prepare_data()
 
     def prepare_data(self):
@@ -67,11 +68,13 @@ class TheTrainer(TrainerBase):
             drop_last=True
         )
 
+        """
         optimizer = torch.optim.AdamW(self.model.parameters(),
                                       lr=self.optimizer_config.lr,
                                       weight_decay=self.optimizer_config.weight_decay,
                                       betas=self.optimizer_config.betas,
                                       eps=self.optimizer_config.eps)
+        """
         self.model.train()
         total_steps = int(ceil(self.n_epochs * len(train_loader) / self.grad_accumulation_steps))
         # eval_steps = int(epoch_steps * 0.8)
@@ -94,11 +97,11 @@ class TheTrainer(TrainerBase):
         step = 0 # Keeps track of batches
 
         lr = get_lr(step=step, min_lr=min_lr, max_lr=max_lr, warmup_iters=warmup_steps, lr_decay_iters=total_steps)
-        for param_group in optimizer.param_groups:
+        for param_group in self.optimizer.param_groups:
             param_group['lr'] = lr
         log_lr[step] = lr
 
-        optimizer.zero_grad()
+        self.optimizer.zero_grad()
         loss_accumulated = 0
 
         # START TRAINING LOOP
@@ -122,15 +125,15 @@ class TheTrainer(TrainerBase):
                     norm = torch.nn.utils.clip_grad_norm_(parameters=self.model.parameters(), max_norm=1.0, norm_type=2)
                     log_batch_loss[step] = loss_accumulated.item()
                     log_grad_norm[step] = norm.item()
-                    optimizer.step()
-                    optimizer.zero_grad()
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
                     loss_accumulated = 0
 
                     # Update for the next step
                     step += 1
                     lr = get_lr(step=step, min_lr=min_lr, max_lr=max_lr, warmup_iters=warmup_steps,
                                 lr_decay_iters=total_steps)
-                    for param_group in optimizer.param_groups:
+                    for param_group in self.optimizer.param_groups:
                         param_group['lr'] = lr
                     if step < total_steps:
                         log_lr[step] = lr
@@ -219,7 +222,6 @@ class TheTrainer(TrainerBase):
             raise RuntimeError('Data and Model must be ready before one batch fitting experiment!')
 
         expected_pre_training_loss = -log(1.0 / self.n_classes)  # -ln(1/n_classes) for cross entropy loss
-        n_samples = len(self.train_data)
 
         print('--- One Batch Fitting ---')
         print(f'Expected Pre-Training Loss: {expected_pre_training_loss:.4f}')
@@ -232,6 +234,8 @@ class TheTrainer(TrainerBase):
             pin_memory=True,
             drop_last=True
         )
+
+        optimizer = self.configure_optimizers(optimizer_name='AdamW')
 
         optimizer = torch.optim.AdamW(self.model.parameters(),
                                       lr=self.optimizer_config.lr,
