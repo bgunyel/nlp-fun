@@ -1,6 +1,7 @@
 .idea/
 __pycache__/
 .env
+.env_colab
 input/
 out/
 docs/
