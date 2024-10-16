@@ -1,11 +1,10 @@
-import os
 import datetime
+import os
 import time
 
 import torch
 
-from config import settings, model_settings
-from source.ml.train_scratch import train_from_scratch
+from source.config import settings
 from source.ml.train_fine_tune import train_fine_tune
 
 

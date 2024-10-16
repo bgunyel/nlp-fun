@@ -8,11 +8,11 @@ def train_fine_tune():
 
     train_config = TrainConfig(
         module_name='sentiment',
-        backbone = PreTrainedModelPath.bert_tiny.value,
+        backbone = PreTrainedModelPath.bert_mini.value,
         dataset_names = ['SetFit/sst5', 'dynabench/dynasent'],
         n_classes = 3,
-        n_epochs = 10,
-        batch_size = 16,
+        n_epochs = 25,
+        batch_size = 32,
         mini_batch_size=8,
         device=torch.device(f'cuda:{torch.cuda.current_device()}' if torch.cuda.is_available() else 'cpu'),
     )

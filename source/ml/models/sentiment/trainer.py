@@ -26,8 +26,10 @@ class TheTrainer(TrainerBase):
         self.name = 'Sentiment Analysis'
         self.model_config=ModelConfig(backbone=self.backbone)
         self.model, self.tokenizer = self.prepare_model()
+        print(f'Number of Model Parameters: {self.get_number_of_model_parameters()}')
         self.optimizer = self.configure_optimizers()
         self.train_data, self.valid_data = self.prepare_data()
+
 
     def prepare_data(self):
         if not self.is_model_ready:
