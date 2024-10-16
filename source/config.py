@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     DATA_FOLDER: str
     OUT_FOLDER: str
+    NUM_WORKERS: int
 
     BROWN_FILE: str
 

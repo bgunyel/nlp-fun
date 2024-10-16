@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from source.config import settings
 from source.ml.datasets import CustomDataset
 from source.ml.models import get_model, get_config
 from source.ml.models.base import TrainConfig
@@ -34,7 +35,7 @@ def train_from_scratch(device: torch.device):
         dataset=train_data,
         batch_size=train_config.batch_size,
         shuffle=True,
-        num_workers=4,
+        num_workers=settings.NUM_WORKERS,
         pin_memory=True,
         drop_last=False
     )
@@ -94,7 +95,7 @@ def train_from_scratch(device: torch.device):
                     data_loader=DataLoader(dataset=train_data,
                                            batch_size=train_config.batch_size,
                                            shuffle=False,
-                                           num_workers=4,
+                                           num_workers=settings.NUM_WORKERS,
                                            pin_memory=True,
                                            drop_last=False)
                 )
@@ -104,7 +105,7 @@ def train_from_scratch(device: torch.device):
                     data_loader=DataLoader(dataset=valid_data,
                                            batch_size=train_config.batch_size,
                                            shuffle=False,
-                                           num_workers=4,
+                                           num_workers=settings.NUM_WORKERS,
                                            pin_memory=True,
                                            drop_last=False)
                 )

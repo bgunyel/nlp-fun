@@ -65,7 +65,7 @@ class TheTrainer(TrainerBase):
             dataset=self.train_data,
             batch_size=self.mini_batch_size,
             shuffle=True,
-            num_workers=4,
+            num_workers=settings.NUM_WORKERS,
             pin_memory=True,
             drop_last=True
         )
@@ -178,14 +178,14 @@ class TheTrainer(TrainerBase):
                                   data_loader=DataLoader(dataset=self.train_data,
                                                          batch_size=self.mini_batch_size,
                                                          shuffle=False,
-                                                         num_workers=4,
+                                                         num_workers=settings.NUM_WORKERS,
                                                          pin_memory=True,
                                                          drop_last=True))
         valid_set_loss = evaluate(model=self.model,
                                   data_loader=DataLoader(dataset=self.valid_data,
                                                          batch_size=self.mini_batch_size,
                                                          shuffle=False,
-                                                         num_workers=4,
+                                                         num_workers=settings.NUM_WORKERS,
                                                          pin_memory=True,
                                                          drop_last=True))
         return train_set_loss, valid_set_loss
@@ -232,7 +232,7 @@ class TheTrainer(TrainerBase):
             dataset=self.train_data,
             batch_size=self.mini_batch_size,
             shuffle=True,
-            num_workers=4,
+            num_workers=settings.NUM_WORKERS,
             pin_memory=True,
             drop_last=True
         )
