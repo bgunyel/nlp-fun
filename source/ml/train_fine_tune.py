@@ -1,29 +1,22 @@
-import torch
+import os
+import tomllib
 
+from source.config import settings
 from source.ml.models import get_trainer
-from source.ml.models.base import PreTrainedModelPath, TrainConfig, OptimizerConfig
+from source.ml.models.base import TrainConfig, OptimizerConfig
 
 
 def train_fine_tune():
 
-    train_config = TrainConfig(
-        module_name='sentiment',
-        backbone = PreTrainedModelPath.bert_mini.value,
-        dataset_names = ['SetFit/sst5', 'dynabench/dynasent'],
-        n_classes = 3,
-        n_epochs = 25,
-        batch_size = 32,
-        mini_batch_size=8,
-        device=torch.device(f'cuda:{torch.cuda.current_device()}' if torch.cuda.is_available() else 'cpu'),
-    )
+    module_name = 'sentiment'
+    config_file_path = os.path.join(settings.INPUT_FOLDER, 'config.toml')
 
-    optimizer_config = OptimizerConfig(
-        name='AdamW',
-        lr = 3e-4,
-        weight_decay = 0.1,
-        betas = (0.9, 0.95),
-        eps = 1e-8
-    )
+    with open(config_file_path, 'rb') as f:
+        config_data = tomllib.load(f)
+        config_data[module_name]['train_config']['module_name'] = module_name
+
+    train_config = TrainConfig(**config_data[module_name]['train_config'])
+    optimizer_config = OptimizerConfig(**config_data[module_name]['optimizer_config'])
 
     if train_config.batch_size % train_config.mini_batch_size != 0:
         raise ValueError('mini_batch_size must be divisible by batch_size')

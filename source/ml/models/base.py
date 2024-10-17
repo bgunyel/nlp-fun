@@ -1,11 +1,11 @@
 import importlib
 import inspect
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict
-from enum import Enum
+
 import torch
+from pydantic import BaseModel
 
-
+"""
 class PreTrainedModelPath(Enum):
     bert_tiny = 'prajjwal1/bert-tiny'  # L:2, H:128
     bert_mini = 'prajjwal1/bert-mini'  # L:4, H:256
@@ -37,24 +37,37 @@ class OptimizerConfig:
     betas: tuple[float, float] = None
     eps: float = None
 
+"""
+
+class TrainConfig(BaseModel):
+    module_name: str
+    backbone: str
+    n_classes: int
+    n_epochs: int
+    batch_size: int
+    mini_batch_size: int
+
+
+class OptimizerConfig(BaseModel):
+    name: str
+    lr: float
+    weight_decay: float
+    betas: list[float]
+    eps: float
+
 
 class TrainerBase(ABC):
 
     def __init__(self, train_config: TrainConfig, optimizer_config: OptimizerConfig):
-        self.module_name = train_config.module_name if train_config.module_name is not None else None
-        self.backbone = train_config.backbone if train_config.backbone is not None else None
-        self.dataset_names = train_config.dataset_names if train_config.dataset_names is not None else None
-        self.n_classes = train_config.n_classes if train_config.n_classes is not None else None
-        self.n_epochs = train_config.n_epochs if train_config.n_epochs is not None else None
-        self.batch_size = train_config.batch_size if train_config.batch_size is not None else None
-        self.mini_batch_size = train_config.mini_batch_size if train_config.mini_batch_size is not None else None
-        self.device = train_config.device if train_config.device is not None else None
 
+        self.device = torch.device(f'cuda:{torch.cuda.current_device()}' if torch.cuda.is_available() else 'cpu')
+
+        self.train_config = train_config
         self.optimizer_config = optimizer_config
 
         self.is_data_ready = False
         self.is_model_ready = False
-        self.grad_accumulation_steps = self.batch_size // self.mini_batch_size
+        self.grad_accumulation_steps = self.train_config.batch_size // self.train_config.mini_batch_size
 
         self.model = None
 
@@ -120,7 +133,7 @@ class TrainerBase(ABC):
         # Use the fused version of the optimizer if it is available
         fused_available = 'fused' in inspect.signature(class_).parameters
         use_fused = fused_available and self.device.type == 'cuda'
-        optimizer_args = asdict(self.optimizer_config)
+        optimizer_args = self.optimizer_config.model_dump()
         optimizer_args['fused'] = use_fused
         optimizer_args.pop('name')
 
