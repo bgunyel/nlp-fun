@@ -19,6 +19,7 @@ tiktoken = "^0.7.0"
 tqdm = "^4.66.5"
 datasets = "^3.0.1"
 transformers = "^4.45.1"
+tomlkit = "^0.13.2"
 
 
 [build-system]
