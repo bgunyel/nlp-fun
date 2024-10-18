@@ -3,19 +3,18 @@ from dataclasses import dataclass
 import torch
 import torch.nn as nn
 from transformers import AutoModel
+from pydantic import BaseModel
 
 
-@dataclass
-class ModelConfig:
+class ModelConfig(BaseModel):
     backbone: str
-    fc_hidden_size: int = 128
-    dropout_prob: float = 0.2
+    fc_hidden_size: int
+    dropout_prob: float
 
 
 class SentimentModel(nn.Module):
-    def __init__(self, config: ModelConfig, num_classes: int):
+    def __init__(self, config: [ModelConfig, BaseModel], num_classes: int):
         super().__init__()
-        self.name = 'Sentiment Analysis'
         self.backbone = AutoModel.from_pretrained(config.backbone)
         self.backbone_hidden_size = self.backbone.config.hidden_size
         self.fc_hidden_size = config.fc_hidden_size

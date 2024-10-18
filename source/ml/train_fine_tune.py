@@ -2,7 +2,7 @@ import os
 import tomllib
 
 from source.config import settings
-from source.ml.models import get_trainer
+from source.ml.models import get_trainer, get_model_config
 from source.ml.models.base import TrainConfig, OptimizerConfig
 
 
@@ -17,10 +17,11 @@ def train_fine_tune():
 
     train_config = TrainConfig(**config_data[module_name]['train_config'])
     optimizer_config = OptimizerConfig(**config_data[module_name]['optimizer_config'])
+    model_config = get_model_config(module_name=module_name, params_dict=config_data[module_name]['model_config'])
 
     if train_config.batch_size % train_config.mini_batch_size != 0:
         raise ValueError('mini_batch_size must be divisible by batch_size')
 
-    trainer = get_trainer(train_config=train_config, optimizer_config=optimizer_config)
+    trainer = get_trainer(train_config=train_config, optimizer_config=optimizer_config, model_config=model_config)
     # trainer.fit_to_one_batch()
     trainer.train()

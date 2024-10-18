@@ -1,5 +1,6 @@
 import importlib
 import torch.nn as nn
+from pydantic import BaseModel
 from source.ml.models.base import TrainerBase, TrainConfig, OptimizerConfig
 
 MODULE_PREFIX = 'source.ml.models'
@@ -24,8 +25,14 @@ def get_config(model_name: str, config_type: str):
     instance = class_()
     return instance
 
-def get_trainer(train_config: TrainConfig, optimizer_config: OptimizerConfig) -> TrainerBase:
+def get_trainer(train_config: TrainConfig, optimizer_config: OptimizerConfig, model_config: BaseModel) -> TrainerBase:
     module = importlib.import_module(name=f'{MODULE_PREFIX}.{train_config.module_name}')
     class_ = getattr(module, 'TheTrainer')
-    instance = class_(train_config, optimizer_config)
+    instance = class_(train_config, optimizer_config, model_config)
+    return instance
+
+def get_model_config(module_name: str, params_dict: dict) -> BaseModel:
+    module = importlib.import_module(name=f'{MODULE_PREFIX}.{module_name}')
+    class_ = getattr(module, 'ModelConfig')
+    instance = class_(**params_dict)
     return instance

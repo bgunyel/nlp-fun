@@ -41,7 +41,6 @@ class OptimizerConfig:
 
 class TrainConfig(BaseModel):
     module_name: str
-    backbone: str
     n_classes: int
     n_epochs: int
     batch_size: int
@@ -58,12 +57,13 @@ class OptimizerConfig(BaseModel):
 
 class TrainerBase(ABC):
 
-    def __init__(self, train_config: TrainConfig, optimizer_config: OptimizerConfig):
+    def __init__(self, train_config: TrainConfig, optimizer_config: OptimizerConfig, model_config: BaseModel):
 
         self.device = torch.device(f'cuda:{torch.cuda.current_device()}' if torch.cuda.is_available() else 'cpu')
 
         self.train_config = train_config
         self.optimizer_config = optimizer_config
+        self.model_config = model_config
 
         self.is_data_ready = False
         self.is_model_ready = False

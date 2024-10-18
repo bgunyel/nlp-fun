@@ -21,15 +21,20 @@ from .data import SentimentDataset
 
 
 class TheTrainer(TrainerBase):
-    def __init__(self, train_config: TrainConfig, optimizer_config: OptimizerConfig):
-        super().__init__(train_config=train_config, optimizer_config=optimizer_config)
+    def __init__(self, train_config: TrainConfig, optimizer_config: OptimizerConfig, model_config: ModelConfig):
+        super().__init__(train_config=train_config, optimizer_config=optimizer_config, model_config=model_config)
         self.name = 'Sentiment Analysis'
-        self.model_config=ModelConfig(backbone=self.train_config.backbone)
         self.model, self.tokenizer = self.prepare_model()
-        print(f'Number of Model Parameters: {self.get_number_of_model_parameters()}')
         self.optimizer = self.configure_optimizers()
         self.train_data, self.valid_data = self.prepare_data()
+        self.print_info()
 
+    def print_info(self):
+        print(f'Trainer Name: {self.name}')
+        print(f'Model Config: {self.model_config}')
+        print(f'Number of Model Parameters: {self.get_number_of_model_parameters():,}')
+        print(f'Train Config: {self.train_config}')
+        print(f'Optimizer Config: {self.optimizer_config}')
 
     def prepare_data(self):
         if not self.is_model_ready:
@@ -42,7 +47,7 @@ class TheTrainer(TrainerBase):
 
     def prepare_model(self) -> tuple[nn.Module, nn.Module]:
         model = SentimentModel(config=self.model_config, num_classes=self.train_config.n_classes).to(self.device)
-        tokenizer = AutoTokenizer.from_pretrained(self.train_config.backbone)
+        tokenizer = AutoTokenizer.from_pretrained(self.model_config.backbone)
         tokenizer.model_max_length = model.backbone.embeddings.position_embeddings.num_embeddings  # to be on the safe side
         self.is_model_ready = True
         return model, tokenizer
@@ -186,10 +191,7 @@ class TheTrainer(TrainerBase):
         config_dict = {
             'train_config': self.train_config.model_dump(),
             'optimizer_config': self.optimizer_config.model_dump(),
-            'model_config': {
-                'fc_hidden_size': self.model_config.fc_hidden_size,
-                'dropout_prob': self.model_config.dropout_prob,
-            }
+            'model_config': self.model_config.model_dump()
         }
 
         with open(config_file_name, 'w', encoding='utf-8') as f:
