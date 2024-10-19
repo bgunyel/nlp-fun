@@ -41,9 +41,10 @@ class TheTrainer(TrainerBase):
             raise RuntimeError('Tokenizer must be prepared before training!')
 
         self.is_data_ready = True
-        train_data = SentimentDataset(data_split='train', tokenizer=self.tokenizer)
-        valid_data = SentimentDataset(data_split='validation', tokenizer=self.tokenizer)
-        return train_data, valid_data
+        # train_data = SentimentDataset.build_dataset(data_split='train', tokenizer=self.tokenizer)
+        # valid_data = SentimentDataset.build_dataset(data_split='validation', tokenizer=self.tokenizer)
+        data_splits = SentimentDataset.build_data_splits(tokenizer=self.tokenizer)
+        return data_splits['train'], data_splits['validation']
 
     def prepare_model(self) -> tuple[nn.Module, nn.Module]:
         model = SentimentModel(config=self.model_config, num_classes=self.train_config.n_classes).to(self.device)
