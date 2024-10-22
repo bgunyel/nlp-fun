@@ -6,6 +6,7 @@ from math import log, ceil
 from random import randint
 
 import pandas as pd
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -57,7 +58,7 @@ class TheTrainer(TrainerBase):
         if (not self.is_data_ready) or (not self.is_model_ready):
             raise RuntimeError('Data and Model must be ready before training!')
 
-        train_start = datetime.datetime.now().replace(microsecond=0)
+        train_start = datetime.datetime.now().replace(microsecond=0).astimezone(tz=datetime.timezone(offset=datetime.timedelta(hours=3), name='UTC+3'))
 
         expected_pre_training_loss = -log(1.0 / self.train_config.n_classes)  # -ln(1/n_classes) for cross entropy loss
         initial_train_set_loss, initial_valid_set_loss, initial_bridge_set_loss = self.evaluate()
@@ -92,6 +93,14 @@ class TheTrainer(TrainerBase):
         log_grad_norm = [-1.0] * total_steps
         log_lr = [-1.0] * total_steps
 
+        # n_params = len(self.optimizer.param_groups[0]['params'])
+        # log_params_grad_norm = np.zeros((n_params, total_steps))
+
+        log_params_grad_norm = {
+            0: np.zeros((len(self.optimizer.param_groups[0]['params']), total_steps)),
+            1: np.zeros((len(self.optimizer.param_groups[1]['params']), total_steps)),
+        }
+
 
         iteration = 0 # Keeps track of mini-batches
         step = 0 # Keeps track of batches
@@ -122,6 +131,14 @@ class TheTrainer(TrainerBase):
                 loss.backward()
 
                 if (iteration + 1) % self.grad_accumulation_steps == 0:
+
+                    for p in [0, 1]:
+                        for i in range(len(self.optimizer.param_groups[p]['params'])):
+                            if self.optimizer.param_groups[p]['params'][i].grad is not None:
+                                log_params_grad_norm[p][i][step] = torch.linalg.vector_norm(
+                                    x=self.optimizer.param_groups[p]['params'][i].grad, ord=2
+                                ).item()
+
                     norm = torch.nn.utils.clip_grad_norm_(parameters=self.model.parameters(), max_norm=1.0, norm_type=2)
                     log_batch_loss[step] = loss_accumulated.item()
                     log_grad_norm[step] = norm.item()
@@ -171,6 +188,8 @@ class TheTrainer(TrainerBase):
 
         log_epoch_df.to_parquet(path=os.path.join(settings.OUT_FOLDER, f'train_log__epoch__{train_start}.parquet'))
         log_step_df.to_parquet(path=os.path.join(settings.OUT_FOLDER, f'train_log__step__{train_start}.parquet'))
+        np.save(file=os.path.join(settings.OUT_FOLDER, f'grad_log__0__{train_start}.npy'), arr=log_params_grad_norm[0])
+        np.save(file=os.path.join(settings.OUT_FOLDER, f'grad_log__1__{train_start}.npy'), arr=log_params_grad_norm[1])
         self.save_config(config_file_name=os.path.join(settings.OUT_FOLDER, f'config__{train_start}.json'))
 
 
