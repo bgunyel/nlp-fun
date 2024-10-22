@@ -26,7 +26,7 @@ class TheTrainer(TrainerBase):
         self.name = 'Sentiment Analysis'
         self.model, self.tokenizer = self.prepare_model()
         self.optimizer = self.configure_optimizers()
-        self.train_data, self.valid_data = self.prepare_data()
+        self.train_data, self.valid_data, self.bridge_data = self.prepare_data()
         self.print_info()
 
     def print_info(self):
@@ -44,7 +44,7 @@ class TheTrainer(TrainerBase):
         # train_data = SentimentDataset.build_dataset(data_split='train', tokenizer=self.tokenizer)
         # valid_data = SentimentDataset.build_dataset(data_split='validation', tokenizer=self.tokenizer)
         data_splits = SentimentDataset.build_data_splits(tokenizer=self.tokenizer)
-        return data_splits['train'], data_splits['validation']
+        return data_splits['train'], data_splits['validation'], data_splits['bridge']
 
     def prepare_model(self) -> tuple[nn.Module, nn.Module]:
         model = SentimentModel(config=self.model_config, num_classes=self.train_config.n_classes).to(self.device)
@@ -60,12 +60,13 @@ class TheTrainer(TrainerBase):
         train_start = datetime.datetime.now().replace(microsecond=0)
 
         expected_pre_training_loss = -log(1.0 / self.train_config.n_classes)  # -ln(1/n_classes) for cross entropy loss
-        initial_train_set_loss, initial_valid_set_loss = self.evaluate()
+        initial_train_set_loss, initial_valid_set_loss, initial_bridge_set_loss = self.evaluate()
 
         print('Pre-Training Stats:')
-        print(f'\t\tExpected Loss  : {expected_pre_training_loss:.4f}')
-        print(f'\t\tTrain Set Loss : {initial_train_set_loss:.4f}')
-        print(f'\t\tValid Set Loss : {initial_valid_set_loss:.4f}')
+        print(f'\t\tExpected Loss   : {expected_pre_training_loss:.4f}')
+        print(f'\t\tTrain Set Loss  : {initial_train_set_loss:.4f}')
+        print(f'\t\tValid Set Loss  : {initial_valid_set_loss:.4f}')
+        print(f'\t\tBridge Set Loss : {initial_bridge_set_loss:.4f}')
 
         train_loader = DataLoader(
             dataset=self.train_data,
@@ -84,6 +85,7 @@ class TheTrainer(TrainerBase):
 
         log_train_loss = [-1.0] * self.train_config.n_epochs
         log_valid_loss = [-1.0] * self.train_config.n_epochs
+        log_bridge_loss = [-1.0] * self.train_config.n_epochs
         log_epoch_duration = [-1.0] * self.train_config.n_epochs
 
         log_batch_loss = [-1.0] * total_steps
@@ -143,20 +145,23 @@ class TheTrainer(TrainerBase):
 
             print(f'Epoch: {epoch+1} finished')
 
-            train_set_loss, valid_set_loss = self.evaluate()
+            train_set_loss, valid_set_loss, bridge_set_loss = self.evaluate()
             log_train_loss[epoch] = train_set_loss
             log_valid_loss[epoch] = valid_set_loss
+            log_bridge_loss[epoch] = bridge_set_loss
             epoch_finish = time.time()
             epoch_duration = epoch_finish - epoch_start
             log_epoch_duration[epoch] = epoch_duration
 
-            print(f'\t\tTrain Set Loss : {train_set_loss:.4f}')
-            print(f'\t\tValid Set Loss : {valid_set_loss:.4f}')
-            print(f'\t\tEpoch Time     : {epoch_duration:.2f} sec')
+            print(f'\t\tTrain Set Loss  : {train_set_loss:.4f}')
+            print(f'\t\tValid Set Loss  : {valid_set_loss:.4f}')
+            print(f'\t\tBridge Set Loss : {bridge_set_loss:.4f}')
+            print(f'\t\tEpoch Time      : {epoch_duration:.2f} sec')
 
         log_epoch_df = pd.DataFrame(data={
             'train_loss': log_train_loss,
             'valid_loss': log_valid_loss,
+            'bridge_loss': log_bridge_loss,
         })
         log_step_df = pd.DataFrame(data={
             'batch_loss': log_batch_loss,
@@ -177,6 +182,13 @@ class TheTrainer(TrainerBase):
                                                          num_workers=settings.NUM_WORKERS,
                                                          pin_memory=True,
                                                          drop_last=True))
+        bridge_set_loss = evaluate(model=self.model,
+                                   data_loader=DataLoader(dataset=self.bridge_data,
+                                                          batch_size=self.train_config.mini_batch_size,
+                                                          shuffle=False,
+                                                          num_workers=settings.NUM_WORKERS,
+                                                          pin_memory=True,
+                                                          drop_last=True))
         valid_set_loss = evaluate(model=self.model,
                                   data_loader=DataLoader(dataset=self.valid_data,
                                                          batch_size=self.train_config.mini_batch_size,
@@ -184,7 +196,7 @@ class TheTrainer(TrainerBase):
                                                          num_workers=settings.NUM_WORKERS,
                                                          pin_memory=True,
                                                          drop_last=True))
-        return train_set_loss, valid_set_loss
+        return train_set_loss, valid_set_loss, bridge_set_loss
 
 
     def save_config(self, config_file_name: str):

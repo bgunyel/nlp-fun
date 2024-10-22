@@ -20,6 +20,7 @@ tqdm = "^4.66.5"
 datasets = "^3.0.1"
 transformers = "^4.45.1"
 tomlkit = "^0.13.2"
+scikit-learn = "^1.5.2"
 
 
 [build-system]

@@ -89,10 +89,19 @@ def visualize_logs(file_path: str):
     n_columns = len(df.columns)
     n_points = len(df)
 
-    for i, col_name in enumerate(df.columns):
+    if x_axis_name == 'epochs':
         plt.figure(figsize=(18, 8))
-        plt.plot(range(n_points), df[col_name])
+        for i, col_name in enumerate(df.columns):
+            plt.plot(range(n_points), df[col_name], label=col_name)
         plt.grid(visible=True)
-        plt.title(col_name)
+        plt.legend()
         plt.xlabel(x_axis_name)
         plt.show()
+    else:
+        for i, col_name in enumerate(df.columns):
+            plt.figure(figsize=(18, 8))
+            plt.plot(range(n_points), df[col_name])
+            plt.grid(visible=True)
+            plt.title(col_name)
+            plt.xlabel(x_axis_name)
+            plt.show()
