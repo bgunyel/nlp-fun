@@ -32,8 +32,8 @@ class SentimentModel(nn.Module):
         x = backbone_out.last_hidden_state[:, 0, :]
         # x = torch.mean(input=backbone_out.last_hidden_state, dim=1, keepdim=False)
 
-        # out = self.dropout(x)
-        out = self.dense(x)
+        out = self.dropout(x)
+        out = self.dense(out)
         out = self.activation(out)
         out = self.dropout(out)
         out = self.out_fc(out)
