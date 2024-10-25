@@ -10,9 +10,12 @@ from source.ml.datasets import *
 
 class SentimentDataset(Dataset):
 
-    def __init__(self, data_list: list[Dataset], data_separations: list[int]):
+    def __init__(self, data_list: list[DatasetBase], data_separations: list[int]):
         self.data_list = data_list
         self.data_separations = data_separations
+
+    def get_info(self) -> list[dict]:
+        return [d.get_info() for d in self.data_list]
 
     @classmethod
     def build_data_splits(cls, tokenizer: [PreTrainedTokenizer, PreTrainedTokenizerFast]):

@@ -1,9 +1,7 @@
-from dataclasses import dataclass
-
 import torch
 import torch.nn as nn
-from transformers import AutoModel
 from pydantic import BaseModel
+from transformers import AutoModel
 
 
 class ModelConfig(BaseModel):

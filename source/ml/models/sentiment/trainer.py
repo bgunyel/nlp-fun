@@ -32,6 +32,9 @@ class TheTrainer(TrainerBase):
 
     def print_info(self):
         print(f'Trainer Name: {self.name}')
+        print(f'Train Set: {self.train_data.get_info()}')
+        print(f'Bridge Set: {self.bridge_data.get_info()}')
+        print(f'Validation Set: {self.valid_data.get_info()}')
         print(f'Model Config: {self.model_config}')
         print(f'Number of Model Parameters: {self.get_number_of_model_parameters():,}')
         print(f'Train Config: {self.train_config}')

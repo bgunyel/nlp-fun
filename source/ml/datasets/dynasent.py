@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from sklearn.model_selection import train_test_split
-import torch
-from torch.utils.data import Dataset
 from datasets import load_dataset
 from transformers.tokenization_utils import PreTrainedTokenizer
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
@@ -11,12 +8,12 @@ from .base import DatasetBase
 
 
 class DynaSent(DatasetBase):
-    def __init__(self, name: str, labels: list, input_ids: list, attention_mask: list):
-        super().__init__(name=name, labels=labels, input_ids=input_ids, attention_mask=attention_mask)
+    def __init__(self, name: str, stoi: dict, labels: list, input_ids: list, attention_mask: list):
+        super().__init__(name=name, stoi=stoi, labels=labels, input_ids=input_ids, attention_mask=attention_mask)
 
     @classmethod
     def prepare_encodings(cls, tokenizer: [PreTrainedTokenizer, PreTrainedTokenizerFast],
-                          data_split: str, data_round: int = None) -> tuple[list, list, list]:
+                          data_split: str, data_round: int = None) -> tuple[list, list, list, dict]:
 
         if data_round is None:
             raise ValueError('data_round must be provided (currently None')
@@ -32,7 +29,8 @@ class DynaSent(DatasetBase):
             truncation=True,
             return_attention_mask=True
         )
-        return encodings['input_ids'], encodings['attention_mask'], data['gold_label']
+        stoi = {'negative': 0, 'neutral': 1, 'positive': 2}
+        return encodings['input_ids'], encodings['attention_mask'], data['gold_label'], stoi
 
 
 
