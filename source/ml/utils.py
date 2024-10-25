@@ -92,7 +92,7 @@ def visualize_logs(file_path: str):
     if x_axis_name == 'epochs':
         plt.figure(figsize=(18, 8))
         for i, col_name in enumerate(df.columns):
-            plt.plot(range(n_points), df[col_name], label=col_name)
+            plt.plot(range(n_points), df[col_name], label=col_name, marker='*')
         plt.grid(visible=True)
         plt.legend()
         plt.xlabel(x_axis_name)

@@ -10,29 +10,25 @@ from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 from .base import DatasetBase
 
 
-class DynaSent(DatasetBase):
+class SST(DatasetBase):
     def __init__(self, name: str, labels: list, input_ids: list, attention_mask: list):
         super().__init__(name=name, labels=labels, input_ids=input_ids, attention_mask=attention_mask)
 
     @classmethod
     def prepare_encodings(cls, tokenizer: [PreTrainedTokenizer, PreTrainedTokenizerFast],
                           data_split: str, data_round: int = None) -> tuple[list, list, list]:
-
-        if data_round is None:
-            raise ValueError('data_round must be provided (currently None')
-
-        name = f'dynabench.dynasent.r{data_round}.all'
-        data_dict = load_dataset(path='dynabench/dynasent', name=name, trust_remote_code=True)
+        data_dict = load_dataset(path='SetFit/sst5')
         data = data_dict[data_split]
         encodings = tokenizer.batch_encode_plus(
-            data['sentence'],
+            data['text'],
             max_length=tokenizer.model_max_length,
             add_special_tokens=True,
             padding='max_length',
             truncation=True,
             return_attention_mask=True
         )
-        return encodings['input_ids'], encodings['attention_mask'], data['gold_label']
+        labels = [s.split(" ")[-1] for s in data['label_text']] # convert from 5 labels to 3 labels
+        return encodings['input_ids'], encodings['attention_mask'], labels
 
 
 

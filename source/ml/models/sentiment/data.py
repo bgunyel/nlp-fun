@@ -14,23 +14,13 @@ class SentimentDataset(Dataset):
         self.data_list = data_list
         self.data_separations = data_separations
 
-    """
-    @classmethod
-    def build_dataset(cls, data_split: str, tokenizer: [PreTrainedTokenizer, PreTrainedTokenizerFast]) -> SentimentDataset:
-        data_list = [
-            DynaSent.build_dataset(data_round=1, data_split=data_split, tokenizer=tokenizer),
-            DynaSent.build_dataset(data_round=2, data_split=data_split, tokenizer=tokenizer)
-        ]
-        data_separations = [0] + list(accumulate([d.__len__() for d in data_list]))
-        return cls(data_list=data_list, data_separations=data_separations)
-    """
-
     @classmethod
     def build_data_splits(cls, tokenizer: [PreTrainedTokenizer, PreTrainedTokenizerFast]):
 
         data_dicts_list = [
-            DynaSent.build_data_splits(data_round=1, tokenizer=tokenizer),
-            DynaSent.build_data_splits(data_round=2, tokenizer=tokenizer),
+            DynaSent.build_data_splits(tokenizer=tokenizer, name='DynaSent', data_round=1),
+            DynaSent.build_data_splits(tokenizer=tokenizer, name='DynaSent', data_round=2),
+            SST.build_data_splits(tokenizer=tokenizer, name='SST'),
         ]
         out_splits = dict()
         for split in ['train', 'bridge', 'validation']:
