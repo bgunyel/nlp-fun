@@ -18,8 +18,8 @@ def evaluate(model: nn.Module, data_loader: DataLoader) -> float:
     model.eval()
 
     losses = torch.zeros(len(data_loader))
-
-    for idx, data_dict in enumerate(data_loader):
+    idx = 0
+    for data_dict in data_loader:
         input_ids = data_dict['input_ids'].to(device)
         attention_mask = data_dict['attention_mask'].to(device)
         label = data_dict['label'].to(device)
@@ -29,6 +29,7 @@ def evaluate(model: nn.Module, data_loader: DataLoader) -> float:
             loss = F.cross_entropy(input=logits, target=label, reduction='mean')
 
         losses[idx] = loss.item()
+        idx += 1
 
     model.train()
     return losses.mean().item()
