@@ -39,6 +39,7 @@ class TheTrainer(TrainerBase):
         print(f'Number of Model Parameters: {self.get_number_of_model_parameters():,}')
         print(f'Train Config: {self.train_config}')
         print(f'Optimizer Config: {self.optimizer_config}')
+        print(f'Number of Workers: {settings.NUM_WORKERS}')
 
     def prepare_data(self):
         if not self.is_model_ready:

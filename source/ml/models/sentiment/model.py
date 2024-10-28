@@ -6,6 +6,7 @@ from transformers import AutoModel
 
 class ModelConfig(BaseModel):
     backbone: str
+    n_backbone_layers_to_train: int
     fc_hidden_size: int
     dropout_prob: float
 
@@ -25,9 +26,19 @@ class SentimentModel(nn.Module):
 
         # self.out_fc = nn.Linear(self.backbone_hidden_size, num_classes)
 
+        n_total_backbone_layers = len(self.backbone.encoder.layer)
+        n_layers_to_train = min(max(0, config.n_backbone_layers_to_train), n_total_backbone_layers)
+        layer_ids = []
+        if n_layers_to_train > 0:
+            layer_ids = list(range(n_total_backbone_layers - n_layers_to_train, n_total_backbone_layers))
+        sub_strings = [f'encoder.layer.{i}.' for i in layer_ids] + ['pooler']
+
         # freeze base model parameters
         for name, param in self.backbone.named_parameters():
-            param.requires_grad = False
+            if any(x in name for x in sub_strings):
+                param.requires_grad = True
+            else:
+                param.requires_grad = False
 
         dummy = -32
 
