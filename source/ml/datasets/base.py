@@ -1,5 +1,6 @@
 from __future__ import annotations
 from abc import abstractmethod
+from typing import Optional
 
 from sklearn.model_selection import train_test_split
 import torch
@@ -31,7 +32,8 @@ class DatasetBase(Dataset):
 
     @classmethod
     def build_data_splits(cls, tokenizer: [PreTrainedTokenizer, PreTrainedTokenizerFast],
-                          name: str, data_round: int = None) -> dict[str, DatasetBase]:
+                          name: str, data_round: Optional[int] = None,
+                          bridge_set_proportion: Optional[float] = None) -> dict[str, DatasetBase]:
 
         valid_input_ids, valid_attention_mask, valid_labels, stoi = cls.prepare_encodings(data_round=data_round,
                                                                                     data_split='validation',
@@ -40,15 +42,18 @@ class DatasetBase(Dataset):
                                                                   data_split='train',
                                                                   tokenizer=tokenizer)
 
+        if bridge_set_proportion is None:
+            bridge_set_proportion = float(len(valid_labels)) / len(labels)
+
         (
             train_input_ids,
             bridge_input_ids,
             train_attention_mask,
             bridge_attention_mask,
             train_labels,
-            bridge_labels
+            bridge_labels,
         ) = train_test_split(input_ids, attention_mask, labels,
-                             test_size=len(valid_labels), random_state=1881, shuffle=True, stratify=labels)
+                             test_size=bridge_set_proportion, random_state=1881, shuffle=True, stratify=labels)
 
         if data_round is not None:
             name = name + f'-Round-{data_round}'

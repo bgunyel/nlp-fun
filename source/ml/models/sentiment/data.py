@@ -20,10 +20,13 @@ class SentimentDataset(Dataset):
     @classmethod
     def build_data_splits(cls, tokenizer: [PreTrainedTokenizer, PreTrainedTokenizerFast]):
 
+        base_component = DynaSent.build_data_splits(tokenizer=tokenizer, name='DynaSent', data_round=1)
+        bridge_set_proportion = float(len(base_component['bridge'])) / len(base_component['train'])
+
         data_dicts_list = [
-            DynaSent.build_data_splits(tokenizer=tokenizer, name='DynaSent', data_round=1),
-            DynaSent.build_data_splits(tokenizer=tokenizer, name='DynaSent', data_round=2),
-            SST.build_data_splits(tokenizer=tokenizer, name='SST'),
+            base_component,
+            DynaSent.build_data_splits(tokenizer=tokenizer, name='DynaSent', data_round=2, bridge_set_proportion=bridge_set_proportion),
+            SST.build_data_splits(tokenizer=tokenizer, name='SST', bridge_set_proportion=bridge_set_proportion),
         ]
         out_splits = dict()
         for split in ['train', 'bridge', 'validation']:
