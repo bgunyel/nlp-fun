@@ -26,12 +26,16 @@ class SentimentModel(nn.Module):
 
         # self.out_fc = nn.Linear(self.backbone_hidden_size, num_classes)
 
+
         n_total_backbone_layers = len(self.backbone.encoder.layer)
+        """
         n_layers_to_train = min(max(0, config.n_backbone_layers_to_train), n_total_backbone_layers)
         layer_ids = []
         if n_layers_to_train > 0:
             layer_ids = list(range(n_total_backbone_layers - n_layers_to_train, n_total_backbone_layers))
-        sub_strings = [f'encoder.layer.{i}.' for i in layer_ids] + ['pooler']
+        """
+        layer_ids = [n_total_backbone_layers - 1]
+        sub_strings = [f'encoder.layer.{i}.intermediate' for i in layer_ids] + ['pooler'] + [f'encoder.layer.{i}.output' for i in layer_ids]
 
         # freeze base model parameters
         for name, param in self.backbone.named_parameters():
@@ -41,13 +45,6 @@ class SentimentModel(nn.Module):
                 param.requires_grad = False
 
         dummy = -32
-
-        """
-        # unfreeze base model pooling layers
-        for name, param in model.base_model.named_parameters():
-            if "pooler" in name:
-                param.requires_grad = True
-        """
 
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor):
