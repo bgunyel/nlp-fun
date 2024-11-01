@@ -35,7 +35,8 @@ class SentimentModel(nn.Module):
             layer_ids = list(range(n_total_backbone_layers - n_layers_to_train, n_total_backbone_layers))
         """
         layer_ids = [n_total_backbone_layers - 1]
-        sub_strings = [f'encoder.layer.{i}.intermediate' for i in layer_ids] + ['pooler'] + [f'encoder.layer.{i}.output' for i in layer_ids]
+        # sub_strings = [f'encoder.layer.{i}.intermediate' for i in layer_ids] + ['pooler'] + [f'encoder.layer.{i}.output' for i in layer_ids]
+        sub_strings = ['pooler'] + [f'encoder.layer.{i}.output' for i in layer_ids]
 
         # freeze base model parameters
         for name, param in self.backbone.named_parameters():
