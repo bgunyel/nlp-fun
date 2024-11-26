@@ -6,7 +6,7 @@ from transformers import AutoModel
 
 class ModelConfig(BaseModel):
     backbone: str
-    n_backbone_layers_to_train: int
+    n_backbone_params_to_train: int
     fc_hidden_size: int
     dropout_prob: float
 
@@ -26,25 +26,15 @@ class SentimentModel(nn.Module):
 
         # self.out_fc = nn.Linear(self.backbone_hidden_size, num_classes)
 
+        n_total_backbone_params = len(list(self.backbone.named_parameters()))
+        n_backbone_params_to_train = min(n_total_backbone_params, config.n_backbone_params_to_train)
 
-        n_total_backbone_layers = len(self.backbone.encoder.layer)
-        """
-        n_layers_to_train = min(max(0, config.n_backbone_layers_to_train), n_total_backbone_layers)
-        layer_ids = []
-        if n_layers_to_train > 0:
-            layer_ids = list(range(n_total_backbone_layers - n_layers_to_train, n_total_backbone_layers))
-        """
-        layer_ids = [n_total_backbone_layers - 1]
-        # sub_strings = [f'encoder.layer.{i}.intermediate' for i in layer_ids] + ['pooler'] + [f'encoder.layer.{i}.output' for i in layer_ids]
-        # sub_strings = ['pooler'] + [f'encoder.layer.{i}.output' for i in layer_ids]
-        sub_strings = ['pooler']
-
-        # freeze base model parameters
-        for name, param in self.backbone.named_parameters():
-            if any(x in name for x in sub_strings):
-                param.requires_grad = True
-            else:
+        # freeze backbone model parameters
+        for idx, (name, param) in enumerate(self.backbone.named_parameters()):
+            if idx < n_total_backbone_params - n_backbone_params_to_train:
                 param.requires_grad = False
+            else:
+                param.requires_grad = True
 
         dummy = -32
 
