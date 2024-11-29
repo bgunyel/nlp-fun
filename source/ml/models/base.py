@@ -41,33 +41,40 @@ class OptimizerConfig:
 
 class TrainConfig(BaseModel):
     module_name: str
-    n_classes: int
-    n_epochs: int
-    batch_size: int
-    mini_batch_size: int
+    n_classes: int = None
+    n_epochs: int = None
+    batch_size: int = None
+    mini_batch_size: int = None
+    vocabulary_size: int = None
 
 
 class OptimizerConfig(BaseModel):
     name: str
-    lr: float
-    weight_decay: float
-    betas: list[float]
-    eps: float
+    lr: float = None
+    weight_decay: float = None
+    betas: list[float] = None
+    eps: float = None
 
 
 class TrainerBase(ABC):
 
-    def __init__(self, train_config: TrainConfig, optimizer_config: OptimizerConfig, model_config: BaseModel):
+    def __init__(self, train_config: TrainConfig, optimizer_config: OptimizerConfig = None, model_config: BaseModel = None):
 
         self.device = torch.device(f'cuda:{torch.cuda.current_device()}' if torch.cuda.is_available() else 'cpu')
 
-        self.train_config = train_config
-        self.optimizer_config = optimizer_config
-        self.model_config = model_config
+        self.train_config = train_config if train_config is not None else None
+        self.optimizer_config = optimizer_config if optimizer_config is not None else None
+        self.model_config = model_config if model_config is not None else None
 
         self.is_data_ready = False
         self.is_model_ready = False
-        self.grad_accumulation_steps = self.train_config.batch_size // self.train_config.mini_batch_size
+        self.grad_accumulation_steps = None
+        if (
+                (self.train_config is not None) and
+                (self.train_config.batch_size is not None) and
+                (self.train_config.mini_batch_size is not None)
+        ):
+            self.grad_accumulation_steps = self.train_config.batch_size // self.train_config.mini_batch_size
 
         self.model = None
 

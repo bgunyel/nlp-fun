@@ -19,8 +19,9 @@ def train_fine_tune():
     optimizer_config = OptimizerConfig(**config_data[module_name]['optimizer_config'])
     model_config = get_model_config(module_name=module_name, params_dict=config_data[module_name]['model_config'])
 
-    if train_config.batch_size % train_config.mini_batch_size != 0:
-        raise ValueError('mini_batch_size must be divisible by batch_size')
+    if (train_config.batch_size is not None) and (train_config.mini_batch_size is not None):
+        if train_config.batch_size % train_config.mini_batch_size != 0:
+            raise ValueError('mini_batch_size must be divisible by batch_size')
 
     trainer = get_trainer(train_config=train_config, optimizer_config=optimizer_config, model_config=model_config)
     # trainer.fit_to_one_batch()

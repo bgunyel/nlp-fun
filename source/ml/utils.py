@@ -97,6 +97,8 @@ def visualize_logs(file_path: str):
         plt.grid(visible=True)
         plt.legend()
         plt.xlabel(x_axis_name)
+        idx = file_path.find('.parquet')
+        plt.title(file_path[idx - 25 : idx])
         plt.show()
     else:
         for i, col_name in enumerate(df.columns):
