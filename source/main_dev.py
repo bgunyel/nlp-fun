@@ -33,5 +33,3 @@ if __name__ == '__main__':
     time_delta = datetime.timedelta(seconds=time2 - time1)
     print(f'{settings.APPLICATION_NAME} finished at {datetime.datetime.now().replace(microsecond=0)}')
     print(f'{settings.APPLICATION_NAME} took ' + (str(time_delta)))
-
-    "{:.2f}".format(1.5)
