@@ -26,10 +26,16 @@ def main():
 
 
 if __name__ == '__main__':
-    print(f'{settings.APPLICATION_NAME} started at {datetime.datetime.now().replace(microsecond=0)}')
+    time_now = datetime.datetime.now().replace(microsecond=0).astimezone(
+        tz=datetime.timezone(offset=datetime.timedelta(hours=3), name='UTC+3'))
+
+    print(f'{settings.APPLICATION_NAME} started at {time_now}')
     time1 = time.time()
     main()
     time2 = time.time()
     time_delta = datetime.timedelta(seconds=time2 - time1)
-    print(f'{settings.APPLICATION_NAME} finished at {datetime.datetime.now().replace(microsecond=0)}')
+
+    time_now = datetime.datetime.now().replace(microsecond=0).astimezone(
+        tz=datetime.timezone(offset=datetime.timedelta(hours=3), name='UTC+3'))
+    print(f'{settings.APPLICATION_NAME} finished at {time_now}')
     print(f'{settings.APPLICATION_NAME} took ' + (str(time_delta)))

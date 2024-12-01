@@ -47,8 +47,7 @@ class TrainConfig(BaseModel):
     mini_batch_size: int = None
 
     dataset_name: str = None
-    source_language: str = None
-    target_language: str = None
+    language: str = None
     vocabulary_size: int = None
 
 

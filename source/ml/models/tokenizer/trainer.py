@@ -1,10 +1,12 @@
 import os
-import importlib
-import time
+
+from tokenizers import Tokenizer
+from tokenizers.models import BPE
+from tokenizers.trainers import BpeTrainer
+from tokenizers.pre_tokenizers import Whitespace
 
 from source.config import settings
 from source.ml.models.base import TrainerBase, TrainConfig, OptimizerConfig
-from source.ml.datasets import Tatoeba
 from .model import ModelConfig
 
 
@@ -12,34 +14,28 @@ class TheTrainer(TrainerBase):
     def __init__(self, train_config: TrainConfig, optimizer_config: OptimizerConfig, model_config: ModelConfig):
         super().__init__(train_config=train_config, optimizer_config=optimizer_config, model_config=model_config)
         self.name = 'Tokenizer'
-        self.model = self.prepare_model()
+        self.tokenizer, self.trainer = self.prepare_model()
         self.train_data = self.prepare_data()
 
     def prepare_data(self):
-        dataset = Tatoeba.build_dataset(dataset_folder=os.path.join(settings.DATA_FOLDER, 'tatoeba'),
-                                        dataset_split='train',
-                                        source_language=self.train_config.source_language,
-                                        target_language=self.train_config.target_language)
-        out = {
-            self.train_config.source_language: ' '.join(dataset.get_source_sentences()),
-            self.train_config.target_language: ' '.join(dataset.get_target_sentences())
-        }
+        match self.train_config.language:
+            case 'tur':
+                out = [
+                    os.path.join(settings.DATA_FOLDER, 'tatoeba', 'cat-tur', 'train.trg'),
+                    os.path.join(settings.DATA_FOLDER, 'tatoeba', 'isl-tur', 'train.trg'),
+                    os.path.join(settings.DATA_FOLDER, 'tatoeba', 'deu-tur', 'train.trg'),
+                    os.path.join(settings.DATA_FOLDER, 'tatoeba', 'eng-tur', 'train.trg')
+                ]
+            case _:
+                out = []
         return out
 
     def prepare_model(self):
-        module = importlib.import_module(name='minbpe')
-        class_ = getattr(module, self.model_config.name)
-
-        out = dict()
-        if (self.train_config.source_language is None) and (self.train_config.target_language is None):
-            out['default'] = class_()
-        else:
-            if self.train_config.source_language is not None:
-                out[self.train_config.source_language] = class_()
-            if self.train_config.target_language is not None:
-                out[self.train_config.target_language] = class_()
-
-        return out
+        tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
+        tokenizer.pre_tokenizer = Whitespace()
+        trainer = BpeTrainer(vocab_size=self.train_config.vocabulary_size,
+                             special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"])
+        return tokenizer, trainer
 
     def train(self):
 
@@ -48,15 +44,10 @@ class TheTrainer(TrainerBase):
         else:
             vocab_size_identifier = f'{round(self.train_config.vocabulary_size / 1000, 2)}k'
 
-        for key, tokenizer in self.model.items():
-            print(f'Tokenizer: {key}')
-            time1 = time.time()
-            tokenizer.train(text=self.train_data[key], vocab_size=self.train_config.vocabulary_size)
-            time2 = time.time()
-            print(f'Tokenizer: {key} took {time2 - time1} seconds')
-            save_name = f'{self.train_config.dataset_name}-{key}_{vocab_size_identifier}'
-            tokenizer.save(os.path.join(settings.OUT_FOLDER, save_name))
+        self.tokenizer.train(self.train_data, self.trainer)
 
+        save_name = f'tokenizer_{self.train_config.language}-{vocab_size_identifier}.json'
+        self.tokenizer.save(path=os.path.join(settings.OUT_FOLDER, save_name), pretty=True)
 
     def evaluate(self):
         raise NotImplementedError
