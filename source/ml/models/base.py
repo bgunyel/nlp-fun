@@ -45,6 +45,10 @@ class TrainConfig(BaseModel):
     n_epochs: int = None
     batch_size: int = None
     mini_batch_size: int = None
+
+    dataset_name: str = None
+    source_language: str = None
+    target_language: str = None
     vocabulary_size: int = None
 
 

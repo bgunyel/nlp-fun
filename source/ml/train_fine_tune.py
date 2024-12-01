@@ -8,11 +8,11 @@ from source.ml.models.base import TrainConfig, OptimizerConfig
 
 def train_fine_tune():
 
-    module_name = 'sentiment'
     config_file_path = os.path.join(settings.INPUT_FOLDER, 'config.toml')
 
     with open(config_file_path, 'rb') as f:
         config_data = tomlkit.load(f)
+        module_name = config_data['module']['name']
         config_data[module_name]['train_config']['module_name'] = module_name
 
     train_config = TrainConfig(**config_data[module_name]['train_config'])
