@@ -17,7 +17,7 @@ class TheTrainer(TrainerBase):
 
     def prepare_data(self):
         dataset = Tatoeba.build_dataset(dataset_folder=os.path.join(settings.DATA_FOLDER, 'tatoeba'),
-                                        dataset_split='test',
+                                        dataset_split='train',
                                         source_language=self.train_config.source_language,
                                         target_language=self.train_config.target_language)
         out = {

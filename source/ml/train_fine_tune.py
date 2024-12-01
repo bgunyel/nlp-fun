@@ -15,6 +15,8 @@ def train_fine_tune():
         module_name = config_data['module']['name']
         config_data[module_name]['train_config']['module_name'] = module_name
 
+    print(f'Module Name: {module_name}')
+
     train_config = TrainConfig(**config_data[module_name]['train_config'])
     optimizer_config = OptimizerConfig(**config_data[module_name]['optimizer_config'])
     model_config = get_model_config(module_name=module_name, params_dict=config_data[module_name]['model_config'])
