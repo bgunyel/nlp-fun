@@ -7,7 +7,7 @@ from tokenizers.pre_tokenizers import Whitespace
 
 from source.config import settings
 from source.ml.models.base import TrainerBase, TrainConfig, OptimizerConfig
-from .model import ModelConfig
+from .model import ModelConfig, TokenizationModel
 
 
 class TheTrainer(TrainerBase):
@@ -15,19 +15,11 @@ class TheTrainer(TrainerBase):
         super().__init__(train_config=train_config, optimizer_config=optimizer_config, model_config=model_config)
         self.name = 'Tokenizer'
         self.tokenizer, self.trainer = self.prepare_model()
+        self.model = TokenizationModel()
         self.train_data = self.prepare_data()
 
     def prepare_data(self):
-        match self.train_config.language:
-            case 'tur':
-                out = [
-                    os.path.join(settings.DATA_FOLDER, 'tatoeba', 'cat-tur', 'train.trg'),
-                    os.path.join(settings.DATA_FOLDER, 'tatoeba', 'isl-tur', 'train.trg'),
-                    os.path.join(settings.DATA_FOLDER, 'tatoeba', 'deu-tur', 'train.trg'),
-                    os.path.join(settings.DATA_FOLDER, 'tatoeba', 'eng-tur', 'train.trg')
-                ]
-            case _:
-                out = []
+        out = self.model.get_train_data(language_code=self.train_config.language)
         return out
 
     def prepare_model(self):
