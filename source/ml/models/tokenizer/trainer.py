@@ -34,7 +34,9 @@ class TheTrainer(TrainerBase):
         tokenizer.decoder = BPEDecoder(suffix='##')
         trainer = BpeTrainer(vocab_size=self.train_config.vocabulary_size,
                              special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"],
-                             show_progress=True)
+                             show_progress=True,
+                             continuing_subword_prefix='##',
+                             end_of_word_suffix='##')
         return tokenizer, trainer
 
     def train(self):
