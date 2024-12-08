@@ -6,6 +6,7 @@ from source.config import settings
 
 class ModelConfig(BaseModel):
     name: str
+    pre_tokenizer: str
 
 
 class TokenizationModel:

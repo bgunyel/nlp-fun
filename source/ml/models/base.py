@@ -50,6 +50,9 @@ class TrainConfig(BaseModel):
     language: str = None
     vocabulary_size: int = None
 
+    source_language: str = None
+    target_language: str = None
+
 
 class OptimizerConfig(BaseModel):
     name: str

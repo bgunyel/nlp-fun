@@ -1,9 +1,10 @@
+import importlib
 import os
 
 from tokenizers import Tokenizer
+from tokenizers.decoders import BPEDecoder
 from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
-from tokenizers.pre_tokenizers import Whitespace
 
 from source.config import settings
 from source.ml.models.base import TrainerBase, TrainConfig, OptimizerConfig
@@ -23,10 +24,17 @@ class TheTrainer(TrainerBase):
         return out
 
     def prepare_model(self):
-        tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
-        tokenizer.pre_tokenizer = Whitespace()
+        tokenizer = Tokenizer(BPE(unk_token="[UNK]", continuing_subword_prefix='##', end_of_word_suffix='##'))
+
+        # Get the pre-tokenizer name from model config and create an instance
+        module = importlib.import_module(name='tokenizers.pre_tokenizers')
+        class_ = getattr(module, self.model_config.pre_tokenizer)
+        tokenizer.pre_tokenizer = class_()
+
+        tokenizer.decoder = BPEDecoder(suffix='##')
         trainer = BpeTrainer(vocab_size=self.train_config.vocabulary_size,
-                             special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"])
+                             special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"],
+                             show_progress=True)
         return tokenizer, trainer
 
     def train(self):

@@ -1,6 +1,9 @@
+import os
 import json
 import torch.nn as nn
+from tokenizers import Tokenizer
 
+from source.config import settings
 from source.ml.models.base import TrainerBase, TrainConfig, OptimizerConfig
 from .model import MachineTranslationModel, ModelConfig
 
@@ -9,6 +12,7 @@ class TheTrainer(TrainerBase):
     def __init__(self, train_config: TrainConfig, optimizer_config: OptimizerConfig, model_config: ModelConfig):
         super().__init__(train_config=train_config, optimizer_config=optimizer_config, model_config=model_config)
         self.name = 'Machine Translation'
+        self.prepare_model()
 
 
     def print_info(self):
@@ -18,10 +22,11 @@ class TheTrainer(TrainerBase):
         raise NotImplementedError
 
     def prepare_model(self) -> tuple[nn.Module, nn.Module]:
-        raise NotImplementedError
+        dummy = -32
+        target_tokenizer = Tokenizer.from_file(path=os.path.join(settings.INPUT_FOLDER, 'tokenizer_tur-100k.json'))
 
     def train(self):
-        raise NotImplementedError
+        dummy = -43
 
 
     def evaluate(self):

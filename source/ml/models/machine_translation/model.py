@@ -5,10 +5,7 @@ from transformers import AutoModel
 
 
 class ModelConfig(BaseModel):
-    backbone: str
-    n_backbone_params_to_train: int
-    fc_hidden_size: int
-    dropout_prob: float
+    name: str
 
 
 class MachineTranslationModel(nn.Module):
