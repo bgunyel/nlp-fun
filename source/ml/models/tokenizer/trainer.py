@@ -24,7 +24,7 @@ class TheTrainer(TrainerBase):
         return out
 
     def prepare_model(self):
-        tokenizer = Tokenizer(BPE(unk_token="[UNK]", continuing_subword_prefix='##', end_of_word_suffix='##'))
+        tokenizer = Tokenizer(BPE(unk_token="[UNK]", end_of_word_suffix='##'))
 
         # Get the pre-tokenizer name from model config and create an instance
         module = importlib.import_module(name='tokenizers.pre_tokenizers')
@@ -35,7 +35,6 @@ class TheTrainer(TrainerBase):
         trainer = BpeTrainer(vocab_size=self.train_config.vocabulary_size,
                              special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"],
                              show_progress=True,
-                             continuing_subword_prefix='##',
                              end_of_word_suffix='##')
         return tokenizer, trainer
 
