@@ -1,10 +1,11 @@
 import os
 import json
 import torch.nn as nn
-from tokenizers import Tokenizer
+from transformers import AutoTokenizer
 
 from source.config import settings
 from source.ml.models.base import TrainerBase, TrainConfig, OptimizerConfig
+from source.ml.datasets.tatoeba import Tatoeba
 from .model import MachineTranslationModel, ModelConfig
 
 
@@ -12,20 +13,56 @@ class TheTrainer(TrainerBase):
     def __init__(self, train_config: TrainConfig, optimizer_config: OptimizerConfig, model_config: ModelConfig):
         super().__init__(train_config=train_config, optimizer_config=optimizer_config, model_config=model_config)
         self.name = 'Machine Translation'
-        self.prepare_model()
+        self.tokenizer_names = {
+            'epo': 'google-t5/t5-base',
+            'eng': 'google-t5/t5-base',
+            'tur': 'boun-tabi-LMG/TURNA'
+        }
+        self.source_tokenizer, self.target_tokenizer = self.prepare_model()
+        self.train_data, self.valid_data = self.prepare_data()
 
 
     def print_info(self):
         raise NotImplementedError
 
+
     def prepare_data(self):
-        raise NotImplementedError
+        if not self.is_model_ready:
+            raise RuntimeError('Tokenizer must be prepared before training!')
+
+        self.is_data_ready = True
+
+        train_data = Tatoeba.build_dataset(dataset_folder=os.path.join(settings.DATA_FOLDER, 'tatoeba'),
+                                           source_language=self.train_config.source_language,
+                                           target_language=self.train_config.target_language,
+                                           dataset_split='train',
+                                           source_tokenizer=self.source_tokenizer,
+                                           target_tokenizer=self.target_tokenizer)
+
+        valid_data = Tatoeba.build_dataset(dataset_folder=os.path.join(settings.DATA_FOLDER, 'tatoeba'),
+                                           source_language=self.train_config.source_language,
+                                           target_language=self.train_config.target_language,
+                                           dataset_split='valid',
+                                           source_tokenizer=self.source_tokenizer,
+                                           target_tokenizer=self.target_tokenizer)
+
+        return train_data, valid_data
+
 
     def prepare_model(self) -> tuple[nn.Module, nn.Module]:
-        dummy = -32
-        target_tokenizer = Tokenizer.from_file(path=os.path.join(settings.INPUT_FOLDER, 'tokenizer_tur-100k.json'))
+
+        source_tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_names[self.train_config.source_language])
+        target_tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_names[self.train_config.target_language])
+        source_tokenizer.model_max_length = 1024  # to be on the safe side
+        target_tokenizer.model_max_length = 1024  # to be on the safe side
+        self.is_model_ready = True
+
+        return source_tokenizer, target_tokenizer
 
     def train(self):
+
+        a = self.train_data[0]
+
         dummy = -43
 
 
