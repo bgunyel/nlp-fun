@@ -26,7 +26,7 @@ class TheTrainer(TrainerBase):
         super().__init__(train_config=train_config, optimizer_config=optimizer_config, model_config=model_config)
         self.name = 'Sentiment Analysis'
         self.model, self.tokenizer = self.prepare_model()
-        self.optimizer = self.configure_optimizers()
+        self.optimizer = self.configure_optimizer(model=self.model)
         self.train_data, self.valid_data, self.bridge_data = self.prepare_data()
         self.print_info()
 

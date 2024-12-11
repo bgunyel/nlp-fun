@@ -3,6 +3,7 @@ import inspect
 from abc import ABC, abstractmethod
 
 import torch
+import torch.nn as nn
 from pydantic import BaseModel
 
 """
@@ -113,7 +114,7 @@ class TrainerBase(ABC):
         )
         return n_params
 
-    def configure_optimizers(self) -> torch.optim.Optimizer:
+    def configure_optimizer(self, model: nn.Module) -> torch.optim.Optimizer:
         """
         Modified from https://github.com/karpathy/nanoGPT/blob/9755682b981a45507f6eb9b11eadef8cb83cebd5/model.py#L263
         """
@@ -122,7 +123,7 @@ class TrainerBase(ABC):
             raise RuntimeError('Model must be prepared before Optimizer!')
 
         # start with all the candidate parameters
-        param_dict = {pn: p for pn, p in self.model.named_parameters()}
+        param_dict = {pn: p for pn, p in model.named_parameters()}
         # filter out those that do not require grad
         param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
         # create optim groups. Any parameters that is 2D will be weight decayed, otherwise no.
