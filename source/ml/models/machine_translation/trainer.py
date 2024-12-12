@@ -5,6 +5,7 @@ import json
 from math import log, ceil
 from random import randint
 
+import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
@@ -37,7 +38,8 @@ class TheTrainer(TrainerBase):
         print(f'Train Set: {self.train_data.get_info()}')
         print(f'Validation Set: {self.valid_data.get_info()}')
         print(f'Model Config: {self.model_config}')
-        print(f'Number of Model Parameters: {self.get_number_of_model_parameters():,}')
+        print(f'Number of Forward Model Parameters: {self.get_number_of_model_parameters(model=self.forward_model):,}')
+        print(f'Number of Backward Model Parameters: {self.get_number_of_model_parameters(model=self.backward_model):,}')
         print(f'Train Config: {self.train_config}')
         print(f'Optimizer Config: {self.optimizer_config}')
         print(f'Number of Workers: {settings.NUM_WORKERS}')
@@ -79,8 +81,12 @@ class TheTrainer(TrainerBase):
         source_tokenizer.add_tokens(new_tokens=[self.model_config.bos_token, self.model_config.eos_token])
         target_tokenizer.add_tokens(new_tokens=[self.model_config.bos_token, self.model_config.eos_token])
 
-        forward_model = MachineTranslationModel(vocabulary_size=source_tokenizer.vocab_size, num_classes=target_tokenizer.vocab_size)
-        backward_model = MachineTranslationModel(vocabulary_size=target_tokenizer.vocab_size, num_classes=source_tokenizer.vocab_size)
+        forward_model = MachineTranslationModel(config=self.model_config,
+                                                vocabulary_size=len(source_tokenizer),
+                                                num_classes=target_tokenizer.vocab_size).to(self.device)
+        backward_model = MachineTranslationModel(config=self.model_config,
+                                                 vocabulary_size=len(target_tokenizer),
+                                                 num_classes=source_tokenizer.vocab_size).to(self.device)
         self.is_model_ready = True
 
         return source_tokenizer, target_tokenizer, forward_model, backward_model
@@ -110,7 +116,8 @@ class TheTrainer(TrainerBase):
             drop_last=True
         )
 
-        self.model.train()
+        self.forward_model.train()
+        self.backward_model.train()
         n_iterations = int(ceil(self.train_config.n_epochs * len(train_loader)))
         warmup_iterations = round(n_iterations * 0.03)
         max_lr = self.optimizer_config.lr
@@ -134,6 +141,10 @@ class TheTrainer(TrainerBase):
 
                 self.forward_optimizer.zero_grad()
                 self.backward_optimizer.zero_grad()
+
+                with torch.autocast(device_type=self.device.type):
+                    logits = self.forward_model(input_ids=source_ids)
+                dummy = -32
 
 
                 iteration += 1

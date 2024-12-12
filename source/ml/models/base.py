@@ -105,12 +105,12 @@ class TrainerBase(ABC):
     def fit_to_one_batch(self):
         pass
 
-    def get_number_of_model_parameters(self) -> int:
+    def get_number_of_model_parameters(self, model: nn.Module) -> int:
         if not self.is_model_ready:
             raise RuntimeError('Model NOT ready!')
 
         n_params = sum(
-            [p.numel() for p in self.model.parameters(recurse=True)]
+            [p.numel() for p in model.parameters(recurse=True)]
         )
         return n_params
 
