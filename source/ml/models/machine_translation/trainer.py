@@ -7,6 +7,7 @@ from random import randint
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 
@@ -76,17 +77,28 @@ class TheTrainer(TrainerBase):
 
         source_tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_names[self.train_config.source_language])
         target_tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_names[self.train_config.target_language])
-        source_tokenizer.model_max_length = 1024  # to be on the safe side
-        target_tokenizer.model_max_length = 1024  # to be on the safe side
+        source_tokenizer.model_max_length = self.model_config.max_sequence_length  # to be on the safe side
+        target_tokenizer.model_max_length = self.model_config.max_sequence_length  # to be on the safe side
         source_tokenizer.add_tokens(new_tokens=[self.model_config.bos_token, self.model_config.eos_token])
         target_tokenizer.add_tokens(new_tokens=[self.model_config.bos_token, self.model_config.eos_token])
 
+        (source_tokenizer_bos_token_id,
+         source_tokenizer_eos_token_id) = source_tokenizer.convert_tokens_to_ids([self.model_config.bos_token,
+                                                                                  self.model_config.eos_token])
+        (target_tokenizer_bos_token_id,
+         target_tokenizer_eos_token_id) = target_tokenizer.convert_tokens_to_ids([self.model_config.bos_token,
+                                                                                  self.model_config.eos_token])
+
         forward_model = MachineTranslationModel(config=self.model_config,
-                                                vocabulary_size=len(source_tokenizer),
-                                                num_classes=target_tokenizer.vocab_size).to(self.device)
+                                                in_vocabulary_size=len(source_tokenizer),
+                                                out_vocabulary_size=len(target_tokenizer),
+                                                bos_token_id=target_tokenizer_bos_token_id,
+                                                eos_token_id=target_tokenizer_eos_token_id,).to(self.device)
         backward_model = MachineTranslationModel(config=self.model_config,
-                                                 vocabulary_size=len(target_tokenizer),
-                                                 num_classes=source_tokenizer.vocab_size).to(self.device)
+                                                 in_vocabulary_size=len(target_tokenizer),
+                                                 out_vocabulary_size=len(source_tokenizer),
+                                                 bos_token_id=source_tokenizer_bos_token_id,
+                                                 eos_token_id=source_tokenizer_eos_token_id).to(self.device)
         self.is_model_ready = True
 
         return source_tokenizer, target_tokenizer, forward_model, backward_model
@@ -143,9 +155,27 @@ class TheTrainer(TrainerBase):
                 self.backward_optimizer.zero_grad()
 
                 with torch.autocast(device_type=self.device.type):
-                    logits = self.forward_model(input_ids=source_ids)
-                dummy = -32
+                    logits_forward = self.forward_model(input_ids=source_ids, output_ids=target_ids)
+                    logits_backward = self.backward_model(input_ids=target_ids, output_ids=source_ids)
+                    loss_forward = F.cross_entropy(input=logits_forward.view(-1, logits_forward.size(-1)),
+                                                   target=target_ids.view(-1),
+                                                   reduction='mean')
+                    loss_backward = F.cross_entropy(input=logits_backward.view(-1, logits_backward.size(-1)),
+                                                    target=source_ids.view(-1),
+                                                    reduction='mean')
 
+                loss_forward.backward()
+                loss_backward.backward()
+
+                norm_forward = torch.nn.utils.clip_grad_norm_(parameters=self.forward_model.parameters(),
+                                                              max_norm=1.0, norm_type=2)
+                norm_backward = torch.nn.utils.clip_grad_norm_(parameters=self.forward_model.parameters(),
+                                                               max_norm=1.0, norm_type=2)
+
+                self.forward_optimizer.step()
+                self.backward_optimizer.step()
+
+                print(f'iteration: {iteration} -- forward loss: {loss_forward:.4f} -- backward loss: {loss_backward:.4f}')
 
                 iteration += 1
 

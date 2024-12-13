@@ -1,0 +1,33 @@
+[module]
+name = 'tokenizer'  # sentiment | tokenizer | machine_translation
+
+[sentiment.train_config]
+n_classes = 3
+n_epochs = 25
+batch_size = 32
+mini_batch_size = 32
+
+[sentiment.optimizer_config]
+name = 'AdamW'
+lr = 3e-4
+weight_decay = 0.1
+betas = [0.9, 0.95]
+eps = 1e-8
+
+[sentiment.model_config]
+backbone = 'prajjwal1/bert-mini'
+n_backbone_params_to_train = 12  # Last backbone params that are NOT frozen
+fc_hidden_size = 256
+dropout_prob = 0.25
+
+[tokenizer.train_config]
+dataset_name = 'tatoeba'
+language = 'tur'
+vocabulary_size = 100000
+
+[tokenizer.optimizer_config]
+name = 'Huggingface'
+
+[tokenizer.model_config]
+name = 'BPE'
+pre_tokenizer = 'Whitespace'  # Whitespace | BertPreTokenizer
