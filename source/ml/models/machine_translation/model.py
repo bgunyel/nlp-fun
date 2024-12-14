@@ -1,5 +1,7 @@
+import random
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from pydantic import BaseModel
 
 
@@ -77,7 +79,11 @@ class RNNEncoderDecoderModel(nn.Module):
         self.bos_token_id = bos_token_id
         self.eos_token_id = eos_token_id
 
-    def forward(self, input_ids: torch.Tensor, output_ids: torch.Tensor):
+    def forward(self, input_ids: torch.Tensor, output_ids: torch.Tensor, teacher_forcing_probability: float):
+
+        if (teacher_forcing_probability < 0) or (teacher_forcing_probability > 1):
+            raise RuntimeError('teacher_forcing_probability must be between 0 and 1')
+
         hidden, cell = self.encoder(input_ids)
 
         logits = torch.zeros(size=(*output_ids.shape, self.out_vocabulary_size)).to(input_ids.device)
@@ -86,7 +92,14 @@ class RNNEncoderDecoderModel(nn.Module):
 
         for i in range(1, self.max_sequence_length):
             logits[:, i, :], hidden, cell = self.decoder(input_ids=decoder_input, hidden=hidden, cell=cell)
-            decoder_input = output_ids[:, i]  # input for the next iteration
+
+            # input for the next iteration
+            if random.random() < teacher_forcing_probability:
+                decoder_input = output_ids[:, i]
+            else:
+                probs = F.softmax(logits[:, i, :], dim=-1)
+                idx_next = torch.multinomial(probs, num_samples=1)
+                decoder_input = idx_next.item()
 
         return logits
 
@@ -108,6 +121,8 @@ class MachineTranslationModel(nn.Module):
 
         dummy = -32
 
-    def forward(self, input_ids: torch.Tensor, output_ids: torch.Tensor):
-        out = self.model(input_ids = input_ids, output_ids = output_ids)
+    def forward(self, input_ids: torch.Tensor, output_ids: torch.Tensor, teacher_forcing_probability: float):
+        out = self.model(input_ids = input_ids,
+                         output_ids = output_ids,
+                         teacher_forcing_probability = teacher_forcing_probability)
         return out

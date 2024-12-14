@@ -35,6 +35,18 @@ def evaluate(model: nn.Module, data_loader: DataLoader) -> float:
     return losses.mean().item()
 
 
+def cosine_decay(iteration: int, min_value: float, max_value: float, decay_iters: int) -> float:
+
+    if iteration < decay_iters:
+        decay_ratio = iteration / decay_iters
+        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))  # coeff ranges 0..1
+        out_value = min_value + coeff * (max_value - min_value)
+    else:
+        out_value = min_value
+
+    return out_value
+
+
 # learning rate decay scheduler (cosine with warmup) (from Karpathy nanoGPT)
 def get_lr(step: int, min_lr: float, max_lr: float, warmup_iters: int, lr_decay_iters: int) -> float:
 
@@ -44,10 +56,13 @@ def get_lr(step: int, min_lr: float, max_lr: float, warmup_iters: int, lr_decay_
         out_lr = min_lr
     else:
         # 3) in between, use cosine decay down to min learning rate
+        """
         decay_ratio = (step - warmup_iters) / (lr_decay_iters - warmup_iters)
         assert 0 <= decay_ratio <= 1
         coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
         out_lr = min_lr + coeff * (max_lr - min_lr)
+        """
+        out_lr = cosine_decay(iteration=step-warmup_iters, min_value=min_lr, max_value=max_lr, decay_iters=lr_decay_iters-warmup_iters)
 
     return out_lr
 

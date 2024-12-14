@@ -14,7 +14,7 @@ from transformers import AutoTokenizer
 from source.config import settings
 from source.ml.models.base import TrainerBase, TrainConfig, OptimizerConfig
 from source.ml.datasets.tatoeba import Tatoeba
-from source.ml.utils import evaluate, get_lr
+from source.ml.utils import evaluate, get_lr, cosine_decay
 from .model import MachineTranslationModel, ModelConfig
 
 
@@ -154,9 +154,15 @@ class TheTrainer(TrainerBase):
                 self.forward_optimizer.zero_grad()
                 self.backward_optimizer.zero_grad()
 
+                teacher_probability = cosine_decay(iteration=iteration, min_value=0, max_value=1, decay_iters=n_iterations)
+
                 with torch.autocast(device_type=self.device.type):
-                    logits_forward = self.forward_model(input_ids=source_ids, output_ids=target_ids)
-                    logits_backward = self.backward_model(input_ids=target_ids, output_ids=source_ids)
+                    logits_forward = self.forward_model(input_ids=source_ids,
+                                                        output_ids=target_ids,
+                                                        teacher_forcing_probability=teacher_probability)
+                    logits_backward = self.backward_model(input_ids=target_ids,
+                                                          output_ids=source_ids,
+                                                          teacher_forcing_probability=teacher_probability)
                     loss_forward = F.cross_entropy(input=logits_forward.view(-1, logits_forward.size(-1)),
                                                    target=target_ids.view(-1),
                                                    reduction='mean')
