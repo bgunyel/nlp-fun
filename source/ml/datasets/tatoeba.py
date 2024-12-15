@@ -107,9 +107,9 @@ class Tatoeba(Dataset):
         language_code = f'{source_language}-{target_language}'
 
         with open(os.path.join(dataset_folder, language_code, f'{dataset_split}.src')) as f:
-            source_sentences = f.read().splitlines()
+            source_sentences = f.read().split(sep='\n')[:-1]
         with open(os.path.join(dataset_folder, language_code, f'{dataset_split}.trg')) as f:
-            target_sentences = f.read().splitlines()
+            target_sentences = f.read().split(sep='\n')[:-1]
 
         if len(source_sentences) != len(target_sentences):
             message = (f'Number of source ({len(source_sentences)}) & '
