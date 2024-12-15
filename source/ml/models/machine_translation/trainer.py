@@ -3,6 +3,7 @@ import time
 import datetime
 import json
 from math import log, ceil
+import random
 
 import numpy as np
 import torch
@@ -218,22 +219,33 @@ class TheTrainer(TrainerBase):
                 self.backward_optimizer.step()
 
                 if iteration % self.train_config.log_iterations == 0:
+
+                    eval_time_start = time.time()
                     valid_loss_forward, valid_loss_backward = self.evaluate(
                         max_eval_iterations = self.train_config.max_eval_iterations
                     )
+                    eval_time_finish = time.time()
+
+                    print(f'iteration: {iteration+1} / {n_iterations:,}: ')
+                    print(f'\t eval time: {eval_time_finish-eval_time_start:.2f} seconds')
 
                     # Logging
+
+
+                    print(f'\t train loss forward: {train_loss_buffer_forward.mean():.4f} -- '
+                          f'valid loss forward: {valid_loss_forward:.4f} -- '
+                          f'train loss backward: {train_loss_buffer_backward.mean():.4f} -- '
+                          f'valid loss backward: {valid_loss_backward:.4f}')
+
+                if iteration % random.choice([2, 3, 5, 7, 11, 13, 17, 19]) == 0:
                     iteration_finish = time.time()
                     average_iteration_time = (iteration_finish - loop_start) / (iteration + 1)
                     expected_loop_time = average_iteration_time * n_iterations
                     expected_train_end = loop_start_datetime + datetime.timedelta(seconds=expected_loop_time)
 
-                    print(f'iteration: {iteration+1} / {n_iterations:,}: '
-                          f'train loss forward: {train_loss_buffer_forward.mean():.4f} -- '
-                          f'valid loss forward: {valid_loss_forward:.4f} -- '
-                          f'train loss backward: {train_loss_buffer_backward.mean():.4f} -- '
-                          f'valid loss backward: {valid_loss_backward:.4f} -- '                          
-                          f'expected train end: {expected_train_end} @ {average_iteration_time:.2f} seconds')
+                    print(f'iteration: {iteration+1} / {n_iterations:,} ({((iteration+1) / n_iterations * 100):.2f} %) finished '
+                          f'@ {average_iteration_time:.2f} seconds/iteration -- '
+                          f'Expected Train End: {expected_train_end}')
 
                 # Update iteration index
                 iteration += 1
