@@ -61,7 +61,8 @@ class TheTrainer(TrainerBase):
                                            source_tokenizer=self.source_tokenizer,
                                            target_tokenizer=self.target_tokenizer,
                                            bos_token=self.model_config.bos_token,
-                                           eos_token=self.model_config.eos_token)
+                                           eos_token=self.model_config.eos_token,
+                                           is_pre_tokenized=True)
 
         valid_data = Tatoeba.build_dataset(dataset_folder=os.path.join(settings.DATA_FOLDER, 'tatoeba'),
                                            source_language=self.train_config.source_language,
@@ -70,7 +71,8 @@ class TheTrainer(TrainerBase):
                                            source_tokenizer=self.source_tokenizer,
                                            target_tokenizer=self.target_tokenizer,
                                            bos_token=self.model_config.bos_token,
-                                           eos_token=self.model_config.eos_token)
+                                           eos_token=self.model_config.eos_token,
+                                           is_pre_tokenized=True)
 
         return train_data, valid_data
 
