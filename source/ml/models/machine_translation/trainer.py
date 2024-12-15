@@ -3,8 +3,8 @@ import time
 import datetime
 import json
 from math import log, ceil
-from random import randint
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -25,6 +25,7 @@ class TheTrainer(TrainerBase):
         self.tokenizer_names = {
             'epo': 'google-t5/t5-base',
             'eng': 'google-t5/t5-base',
+            'ina': 'google-t5/t5-base',
             'tur': 'boun-tabi-LMG/TURNA'
         }
         self.source_tokenizer, self.target_tokenizer, self.forward_model, self.backward_model = self.prepare_model()
@@ -83,22 +84,28 @@ class TheTrainer(TrainerBase):
         target_tokenizer.add_tokens(new_tokens=[self.model_config.bos_token, self.model_config.eos_token])
 
         (source_tokenizer_bos_token_id,
-         source_tokenizer_eos_token_id) = source_tokenizer.convert_tokens_to_ids([self.model_config.bos_token,
-                                                                                  self.model_config.eos_token])
+         source_tokenizer_eos_token_id,
+         source_tokenizer_pad_token_id) = source_tokenizer.convert_tokens_to_ids([self.model_config.bos_token,
+                                                                                  self.model_config.eos_token,
+                                                                                  source_tokenizer.special_tokens_map['pad_token']])
         (target_tokenizer_bos_token_id,
-         target_tokenizer_eos_token_id) = target_tokenizer.convert_tokens_to_ids([self.model_config.bos_token,
-                                                                                  self.model_config.eos_token])
+         target_tokenizer_eos_token_id,
+         target_tokenizer_pad_token_id) = target_tokenizer.convert_tokens_to_ids([self.model_config.bos_token,
+                                                                                  self.model_config.eos_token,
+                                                                                  target_tokenizer.special_tokens_map['pad_token']])
 
         forward_model = MachineTranslationModel(config=self.model_config,
                                                 in_vocabulary_size=len(source_tokenizer),
                                                 out_vocabulary_size=len(target_tokenizer),
                                                 bos_token_id=target_tokenizer_bos_token_id,
-                                                eos_token_id=target_tokenizer_eos_token_id,).to(self.device)
+                                                eos_token_id=target_tokenizer_eos_token_id,
+                                                pad_token_id=target_tokenizer_pad_token_id).to(self.device)
         backward_model = MachineTranslationModel(config=self.model_config,
                                                  in_vocabulary_size=len(target_tokenizer),
                                                  out_vocabulary_size=len(source_tokenizer),
                                                  bos_token_id=source_tokenizer_bos_token_id,
-                                                 eos_token_id=source_tokenizer_eos_token_id).to(self.device)
+                                                 eos_token_id=source_tokenizer_eos_token_id,
+                                                 pad_token_id=source_tokenizer_pad_token_id).to(self.device)
         self.is_model_ready = True
 
         return source_tokenizer, target_tokenizer, forward_model, backward_model
@@ -119,6 +126,15 @@ class TheTrainer(TrainerBase):
         train_start = datetime.datetime.now().replace(microsecond=0).astimezone(
             tz=datetime.timezone(offset=datetime.timedelta(hours=3), name='UTC+3'))
 
+        print(f'Training started at {train_start}')
+
+        # -ln(1/n_classes) for cross entropy loss
+        expected_pre_training_loss_forward = -log(1.0 / self.target_tokenizer.vocab_size)
+        expected_pre_training_loss_backward = -log(1.0 / self.source_tokenizer.vocab_size)
+
+        print(f'Expected pre-training loss (forward model): {expected_pre_training_loss_forward}')
+        print(f'Expected pre-training loss (backward model): {expected_pre_training_loss_backward}')
+
         train_loader = DataLoader(
             dataset=self.train_data,
             batch_size=self.train_config.batch_size,
@@ -135,6 +151,21 @@ class TheTrainer(TrainerBase):
         max_lr = self.optimizer_config.lr
         min_lr = max_lr / 10
 
+        print(f'Total number of iterations: {n_iterations}')
+        print(f'Warmup iterations: {warmup_iterations}')
+
+
+        loop_start_datetime = datetime.datetime.now().replace(microsecond=0).astimezone(
+            tz=datetime.timezone(offset=datetime.timedelta(hours=3), name='UTC+3'))
+        print(f'Loop started at: {loop_start_datetime}')
+
+        loop_start = time.time()
+
+        buffer_size = 100
+        eval_iterations = 10
+        train_loss_buffer_forward = np.ones(buffer_size, dtype=float) * expected_pre_training_loss_forward
+        train_loss_buffer_backward = np.ones(buffer_size, dtype=float) * expected_pre_training_loss_backward
+
         iteration = 0
 
         # START TRAINING LOOP
@@ -145,8 +176,8 @@ class TheTrainer(TrainerBase):
             for data_dict in train_loader:
                 source_ids = data_dict['source']['input_ids'].to(self.device)
                 target_ids = data_dict['target']['input_ids'].to(self.device)
-                source_attention_count = data_dict['source']['attention_count'].to(self.device)
-                target_attention_count = data_dict['target']['attention_count'].to(self.device)
+                # source_attention_count = data_dict['source']['attention_count'].to(self.device)
+                # target_attention_count = data_dict['target']['attention_count'].to(self.device)
 
                 self.adjust_lr(iteration=iteration, min_lr=min_lr, max_lr=max_lr,
                                warmup_iterations=warmup_iterations, n_iterations=n_iterations)
@@ -170,6 +201,9 @@ class TheTrainer(TrainerBase):
                                                     target=source_ids.view(-1),
                                                     reduction='mean')
 
+                train_loss_buffer_forward[iteration % buffer_size] = loss_forward.item()
+                train_loss_buffer_backward[iteration % buffer_size] = loss_backward.item()
+
                 loss_forward.backward()
                 loss_backward.backward()
 
@@ -181,8 +215,24 @@ class TheTrainer(TrainerBase):
                 self.forward_optimizer.step()
                 self.backward_optimizer.step()
 
-                print(f'iteration: {iteration} -- forward loss: {loss_forward:.4f} -- backward loss: {loss_backward:.4f}')
+                if iteration % eval_iterations == 0:
+                    data_use_ratio = 0.2 + 0.8 * iteration / n_iterations
+                    valid_loss_forward, valid_loss_backward = self.evaluate(data_use_ratio=data_use_ratio)
 
+                    # Logging
+                    iteration_finish = time.time()
+                    average_iteration_time = (iteration_finish - loop_start) / (iteration + 1)
+                    expected_loop_time = average_iteration_time * n_iterations
+                    expected_train_end = loop_start_datetime + datetime.timedelta(seconds=expected_loop_time)
+
+                    print(f'iteration: {iteration+1} / {n_iterations:,}: '
+                          f'train loss forward: {train_loss_buffer_forward.mean():.4f} -- '
+                          f'valid loss forward: {valid_loss_forward:.4f} -- '
+                          f'train loss backward: {train_loss_buffer_backward.mean():.4f} -- '
+                          f'valid loss backward: {valid_loss_backward:.4f} -- '                          
+                          f'expected train end: {expected_train_end} @ {average_iteration_time:.2f} seconds')
+
+                # Update iteration index
                 iteration += 1
 
             # End of epoch
@@ -193,8 +243,56 @@ class TheTrainer(TrainerBase):
         dummy = -43
 
 
-    def evaluate(self):
-        raise NotImplementedError
+    @torch.no_grad()
+    def evaluate(self, data_use_ratio: float):
+
+        if (data_use_ratio < 0) or (data_use_ratio > 1.0):
+            raise RuntimeError('data_use_ratio must be in [0, 1]')
+
+        self.forward_model.eval()
+        self.backward_model.eval()
+
+        valid_loader = DataLoader(
+            dataset=self.valid_data,
+            batch_size=self.train_config.batch_size,
+            shuffle=True,
+            num_workers=settings.NUM_WORKERS,
+            pin_memory=True,
+            drop_last=True
+        )
+        losses_forward = torch.zeros(len(valid_loader))
+        losses_backward = torch.zeros(len(valid_loader))
+        n_samples_to_use = int(len(valid_loader) * data_use_ratio)
+
+        idx = 0
+        for data_dict in valid_loader:
+
+            source_ids = data_dict['source']['input_ids'].to(self.device)
+            target_ids = data_dict['target']['input_ids'].to(self.device)
+
+            with torch.autocast(device_type=self.device.type):
+                logits_forward = self.forward_model(input_ids=source_ids,
+                                                    output_ids=target_ids,
+                                                    teacher_forcing_probability=0)
+                logits_backward = self.backward_model(input_ids=target_ids,
+                                                      output_ids=source_ids,
+                                                      teacher_forcing_probability=0)
+                loss_forward = F.cross_entropy(input=logits_forward.view(-1, logits_forward.size(-1)),
+                                               target=target_ids.view(-1),
+                                               reduction='mean')
+                loss_backward = F.cross_entropy(input=logits_backward.view(-1, logits_backward.size(-1)),
+                                                target=source_ids.view(-1),
+                                                reduction='mean')
+            losses_forward[idx] = loss_forward.item()
+            losses_backward[idx] = loss_backward.item()
+
+            idx += 1
+            if (idx * self.train_config.batch_size) >= n_samples_to_use:
+                break
+
+        self.forward_model.train()
+        self.backward_model.train()
+        return losses_forward[:idx].mean().item(), losses_backward[:idx].mean().item()
 
 
     def save_config(self, config_file_name: str):
