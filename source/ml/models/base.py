@@ -46,6 +46,8 @@ class TrainConfig(BaseModel):
     n_epochs: int = None
     batch_size: int = None
     mini_batch_size: int = None
+    log_iterations: int = None  # logging occurs at every (log_iteration)-th iteration
+    max_eval_iterations: int = None  # during evaluation, maximum of this many random batches are used
 
     dataset_name: str = None
     language: str = None

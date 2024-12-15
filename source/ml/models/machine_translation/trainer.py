@@ -132,8 +132,8 @@ class TheTrainer(TrainerBase):
         expected_pre_training_loss_forward = -log(1.0 / self.target_tokenizer.vocab_size)
         expected_pre_training_loss_backward = -log(1.0 / self.source_tokenizer.vocab_size)
 
-        print(f'Expected pre-training loss (forward model): {expected_pre_training_loss_forward}')
-        print(f'Expected pre-training loss (backward model): {expected_pre_training_loss_backward}')
+        print(f'Expected pre-training loss (forward model): {expected_pre_training_loss_forward:.4f}')
+        print(f'Expected pre-training loss (backward model): {expected_pre_training_loss_backward:.4f}')
 
         train_loader = DataLoader(
             dataset=self.train_data,
@@ -151,8 +151,8 @@ class TheTrainer(TrainerBase):
         max_lr = self.optimizer_config.lr
         min_lr = max_lr / 10
 
-        print(f'Total number of iterations: {n_iterations}')
-        print(f'Warmup iterations: {warmup_iterations}')
+        print(f'Total number of iterations: {n_iterations:,}')
+        print(f'Warmup iterations: {warmup_iterations:,}')
 
 
         loop_start_datetime = datetime.datetime.now().replace(microsecond=0).astimezone(
@@ -161,8 +161,10 @@ class TheTrainer(TrainerBase):
 
         loop_start = time.time()
 
-        buffer_size = 100
-        eval_iterations = 10
+        # eval_iterations = 2000
+        # max_eval_iterations = 250
+
+        buffer_size = self.train_config.log_iterations
         train_loss_buffer_forward = np.ones(buffer_size, dtype=float) * expected_pre_training_loss_forward
         train_loss_buffer_backward = np.ones(buffer_size, dtype=float) * expected_pre_training_loss_backward
 
@@ -215,9 +217,10 @@ class TheTrainer(TrainerBase):
                 self.forward_optimizer.step()
                 self.backward_optimizer.step()
 
-                if iteration % eval_iterations == 0:
-                    data_use_ratio = 0.2 + 0.8 * iteration / n_iterations
-                    valid_loss_forward, valid_loss_backward = self.evaluate(data_use_ratio=data_use_ratio)
+                if iteration % self.train_config.log_iterations == 0:
+                    valid_loss_forward, valid_loss_backward = self.evaluate(
+                        max_eval_iterations = self.train_config.max_eval_iterations
+                    )
 
                     # Logging
                     iteration_finish = time.time()
@@ -236,6 +239,7 @@ class TheTrainer(TrainerBase):
                 iteration += 1
 
             # End of epoch
+            valid_loss_forward, valid_loss_backward = self.evaluate()
             epoch_finish = time.time()
             epoch_duration = epoch_finish - epoch_start
 
@@ -244,10 +248,7 @@ class TheTrainer(TrainerBase):
 
 
     @torch.no_grad()
-    def evaluate(self, data_use_ratio: float):
-
-        if (data_use_ratio < 0) or (data_use_ratio > 1.0):
-            raise RuntimeError('data_use_ratio must be in [0, 1]')
+    def evaluate(self, max_eval_iterations: int = None):
 
         self.forward_model.eval()
         self.backward_model.eval()
@@ -260,13 +261,17 @@ class TheTrainer(TrainerBase):
             pin_memory=True,
             drop_last=True
         )
-        losses_forward = torch.zeros(len(valid_loader))
-        losses_backward = torch.zeros(len(valid_loader))
-        n_samples_to_use = int(len(valid_loader) * data_use_ratio)
+
+        if max_eval_iterations is not None:
+            max_iterations = int(min(max_eval_iterations, len(valid_loader)))
+        else:
+            max_iterations = len(valid_loader)
+
+        losses_forward = torch.zeros(max_iterations)
+        losses_backward = torch.zeros(max_iterations)
 
         idx = 0
         for data_dict in valid_loader:
-
             source_ids = data_dict['source']['input_ids'].to(self.device)
             target_ids = data_dict['target']['input_ids'].to(self.device)
 
@@ -287,7 +292,7 @@ class TheTrainer(TrainerBase):
             losses_backward[idx] = loss_backward.item()
 
             idx += 1
-            if (idx * self.train_config.batch_size) >= n_samples_to_use:
+            if idx >= max_iterations:
                 break
 
         self.forward_model.train()
